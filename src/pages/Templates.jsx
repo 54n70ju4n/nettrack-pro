@@ -284,26 +284,30 @@ function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCusto
     <div>
       <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{title}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {ALL_FIELDS[category].map((field) => (
-          <label key={field} className="flex items-center gap-2.5 cursor-pointer">
-            <Checkbox checked={tpl[category]?.includes(field) || false} onCheckedChange={() => onToggle(tpl, category, field)} />
-            <span className="text-sm">{FIELD_LABELS[field]}</span>
-          </label>
+        {ALL_FIELDS[category].map((field) => {
+          const checked = tpl[category]?.includes(field) || false;
+          return (
+            <div key={field} className="flex items-center gap-2.5">
+              <Checkbox checked={checked} onCheckedChange={() => onToggle(tpl, category, field)} />
+              <span className="text-sm flex-1">{FIELD_LABELS[field]}</span>
+              {checked && (
+                <button type="button" onClick={() => onToggle(tpl, category, field)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {customItems.map((c) => (
+          <div key={c.id} className="flex items-center gap-2.5">
+            <Checkbox checked disabled />
+            <span className="text-sm flex-1">{c.label}</span>
+            <button type="button" onClick={() => onRemoveCustom(tpl, c.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         ))}
       </div>
-      {customItems.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-border">
-          {customItems.map((c) => (
-            <div key={c.id} className="flex items-center gap-2.5">
-              <Checkbox checked disabled />
-              <span className="text-sm flex-1">{c.label}</span>
-              <button onClick={() => onRemoveCustom(tpl, c.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
       <div className="flex gap-2 mt-2">
         <Input
           value={newItem}
