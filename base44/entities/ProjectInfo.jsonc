@@ -1,0 +1,30 @@
+{
+  "name": "ProjectInfo",
+  "type": "object",
+  "properties": {
+    "project_name": {
+      "type": "string",
+      "description": "Nombre del proyecto"
+    },
+    "client": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "address": {
+      "type": "string",
+      "description": "Direcci\u00f3n del proyecto"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n general del proyecto"
+    }
+  },
+  "required": [
+    "project_name"
+  ]
+}
