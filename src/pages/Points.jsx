@@ -78,7 +78,6 @@ export default function Points() {
         case "name": return (p.name || "").toLowerCase();
         case "floor": return (floorMap[p.floor_id] || "").toLowerCase();
         case "space": return (spaceMap[p.space_id] || "").toLowerCase();
-        case "technician": return (p.technician || "").toLowerCase();
         case "status": return p.status || "";
         case "progress": return getPointProgress(p);
         default: return "";
@@ -140,9 +139,8 @@ export default function Points() {
         {/* Table header */}
         <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <button onClick={() => toggleSort("name")} className="col-span-3 flex items-center gap-1 hover:text-foreground transition-colors text-left">Punto <SortIcon k="name" /></button>
-          <button onClick={() => toggleSort("floor")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Piso <SortIcon k="floor" /></button>
-          <button onClick={() => toggleSort("space")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Espacio <SortIcon k="space" /></button>
-          <button onClick={() => toggleSort("technician")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Técnico <SortIcon k="technician" /></button>
+          <button onClick={() => toggleSort("floor")} className="col-span-3 flex items-center gap-1 hover:text-foreground transition-colors text-left">Piso <SortIcon k="floor" /></button>
+          <button onClick={() => toggleSort("space")} className="col-span-3 flex items-center gap-1 hover:text-foreground transition-colors text-left">Espacio <SortIcon k="space" /></button>
           <button onClick={() => toggleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Estado <SortIcon k="status" /></button>
           <div className="col-span-1"></div>
         </div>
@@ -159,9 +157,8 @@ export default function Points() {
                     <DeviceIcon type={pt.device_type} size="sm" />
                     <span className="font-medium text-sm">{pt.name}</span>
                   </div>
-                  <div className="col-span-2 text-sm text-muted-foreground">{floorMap[pt.floor_id] || "—"}</div>
-                  <div className="col-span-2 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
-                  <div className="col-span-2 text-sm text-muted-foreground">{pt.technician || "—"}</div>
+                  <div className="col-span-3 text-sm text-muted-foreground">{floorMap[pt.floor_id] || "—"}</div>
+                  <div className="col-span-3 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
                   <div className="col-span-2 flex items-center gap-2">
                     <StatusBadge status={pt.status} />
                     <span className="text-xs text-muted-foreground font-medium">{progress}%</span>

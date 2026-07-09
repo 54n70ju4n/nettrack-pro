@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { ArrowLeft, Loader2, Save, Camera, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 
 export default function Checklist() {
   const { pointId } = useParams();
@@ -63,7 +64,7 @@ export default function Checklist() {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const isEth = form.device_type === "ethernet";
+  const tpl = getTemplate(form.device_type);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-8">
@@ -82,7 +83,7 @@ export default function Checklist() {
         <StatusBadge status={form.status} />
       </div>
 
-      {/* Status & Technician */}
+      {/* Status & Template info */}
       <Section title="General">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -98,8 +99,11 @@ export default function Checklist() {
             </Select>
           </div>
           <div>
-            <Label className="text-xs mb-1.5 block">Técnico</Label>
-            <Input value={form.technician || ""} onChange={(e) => update("technician", e.target.value)} placeholder="Nombre del técnico" />
+            <Label className="text-xs mb-1.5 block">Plantilla</Label>
+            <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-muted/30 text-sm text-muted-foreground">
+              <DeviceIcon type={form.device_type} size="sm" />
+              {tpl.label}
+            </div>
           </div>
         </div>
       </Section>
@@ -107,31 +111,31 @@ export default function Checklist() {
       {/* Activities */}
       <Section title="Actividades">
         <div className="space-y-3">
-          <CheckItem label="Perforación" checked={form.act_perforacion} onChange={(v) => update("act_perforacion", v)} />
-          <CheckItem label="Pesca del cable" checked={form.act_pesca_cable} onChange={(v) => update("act_pesca_cable", v)} />
-          <div className="flex items-center justify-between">
-            <CheckItem label="Ponchado" checked={form.act_ponchado} onChange={(v) => update("act_ponchado", v)} />
-            <Select value={form.ponchado_type || "na"} onValueChange={(v) => update("ponchado_type", v)}>
-              <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="na">N/A</SelectItem>
-                <SelectItem value="jack">Jack (ETH)</SelectItem>
-                <SelectItem value="z_plug">Z-Plug</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {tpl.activities.map((field) => (
+            <div key={field} className="flex items-center justify-between">
+              <CheckItem label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+              {field === "act_ponchado" && tpl.showPonchadoType && (
+                <Select value={form.ponchado_type || "na"} onValueChange={(v) => update("ponchado_type", v)}>
+                  <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="na">N/A</SelectItem>
+                    <SelectItem value="jack">Jack (ETH)</SelectItem>
+                    <SelectItem value="z_plug">Z-Plug</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          ))}
         </div>
       </Section>
 
-      {/* Accessories (Ethernet only) */}
-      {isEth && (
-        <Section title="Accesorios Ethernet">
+      {/* Accessories */}
+      {tpl.accessories.length > 0 && (
+        <Section title="Accesorios">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <CheckItem label="Face Plate" checked={form.acc_face_plate} onChange={(v) => update("acc_face_plate", v)} />
-            <CheckItem label="Tapa Face Plate" checked={form.acc_tapa_face_plate} onChange={(v) => update("acc_tapa_face_plate", v)} />
-            <CheckItem label="Tornillos" checked={form.acc_tornillos} onChange={(v) => update("acc_tornillos", v)} />
-            <CheckItem label="Rótulo" checked={form.acc_rotulo} onChange={(v) => update("acc_rotulo", v)} />
-            <CheckItem label="Protector" checked={form.acc_protector} onChange={(v) => update("acc_protector", v)} />
+            {tpl.accessories.map((field) => (
+              <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+            ))}
           </div>
         </Section>
       )}
@@ -139,11 +143,9 @@ export default function Checklist() {
       {/* Equipment */}
       <Section title="Equipo">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <CheckItem label="Equipo instalado" checked={form.equipo_instalado} onChange={(v) => update("equipo_instalado", v)} />
-          <CheckItem label="Equipo configurado" checked={form.equipo_configurado} onChange={(v) => update("equipo_configurado", v)} />
-          <CheckItem label="Equipo probado" checked={form.equipo_probado} onChange={(v) => update("equipo_probado", v)} />
-          <CheckItem label="Funcionando correctamente" checked={form.funcionando} onChange={(v) => update("funcionando", v)} />
-          <CheckItem label="Ponchado e identificado en rack" checked={form.ponchado_rack} onChange={(v) => update("ponchado_rack", v)} />
+          {tpl.equipment.map((field) => (
+            <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+          ))}
         </div>
       </Section>
 
