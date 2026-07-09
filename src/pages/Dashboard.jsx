@@ -65,6 +65,16 @@ export default function Dashboard() {
     }).filter((f) => f.total > 0);
   }, [floors, filtered]);
 
+  const spaceProgress = useMemo(() => {
+    if (filterFloor === "all") return [];
+    const floorSpaces = spaces.filter((s) => s.floor_id === filterFloor);
+    return floorSpaces.map((s) => {
+      const sp = filtered.filter((p) => p.space_id === s.id);
+      const done = sp.filter((p) => p.status === "finalizado").length;
+      return { id: s.id, name: s.name, total: sp.length, done, pct: sp.length ? Math.round((done / sp.length) * 100) : 0 };
+    }).filter((s) => s.total > 0);
+  }, [spaces, filtered, filterFloor]);
+
   const deviceData = useMemo(() => {
     const types = ["ethernet", "camara", "access_point"];
     const labels = { ethernet: "Ethernet", camara: "Cámaras", access_point: "AP WiFi" };
@@ -146,10 +156,28 @@ export default function Dashboard() {
 
       {/* Charts row */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Floor progress bars */}
+        {/* Floor / Space progress bars */}
         <div className="bg-white rounded-xl border border-border p-5">
-          <h3 className="font-heading font-semibold text-sm mb-4">Avance por piso</h3>
-          {floorProgress.length === 0 ? (
+          <h3 className="font-heading font-semibold text-sm mb-4">
+            {filterFloor !== "all" ? "Avance por espacio" : "Avance por piso"}
+          </h3>
+          {filterFloor !== "all" ? (
+            spaceProgress.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos aún</p>
+            ) : (
+              <div className="space-y-3">
+                {spaceProgress.map((s) => (
+                  <div key={s.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{s.name}</span>
+                      <span className="text-xs text-muted-foreground">{s.done}/{s.total} · {s.pct}%</span>
+                    </div>
+                    <ProgressBar value={s.pct} />
+                  </div>
+                ))}
+              </div>
+            )
+          ) : floorProgress.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No hay datos aún</p>
           ) : (
             <div className="space-y-3">

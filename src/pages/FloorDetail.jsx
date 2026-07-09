@@ -151,8 +151,8 @@ export default function FloorDetail() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-muted rounded-full">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    <div className="w-28 h-2 bg-muted rounded-full">
+                      <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
                     </div>
                     <button
                       onClick={() => { setEditSpace(s); setEditSpaceName(s.name); setEditSpaceType(s.space_type || "habitacion"); }}
