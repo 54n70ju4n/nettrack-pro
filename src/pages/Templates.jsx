@@ -20,6 +20,7 @@ export default function Templates() {
   const [saving, setSaving] = useState(false);
   const [editTpl, setEditTpl] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("ethernet");
 
@@ -58,10 +59,11 @@ export default function Templates() {
     load();
   };
 
-  const deleteTemplate = async (tpl) => {
-    if (!confirm(`¿Eliminar la plantilla "${tpl.name}"?`)) return;
-    await base44.entities.ChecklistTemplate.delete(tpl.id);
+  const deleteTemplate = async () => {
+    if (!deleteTarget) return;
+    await base44.entities.ChecklistTemplate.delete(deleteTarget.id);
     toast({ title: "Plantilla eliminada" });
+    setDeleteTarget(null);
     load();
   };
 
@@ -147,7 +149,7 @@ export default function Templates() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" onClick={() => setEditTpl({ ...tpl })}>Editar</Button>
-                    <button onClick={() => deleteTemplate(tpl)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                    <button type="button" onClick={() => setDeleteTarget(tpl)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -255,6 +257,19 @@ export default function Templates() {
             </div>
             <Button onClick={createTemplate} className="w-full">Crear</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Delete confirmation */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Eliminar plantilla</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">¿Seguro que deseas eliminar "{deleteTarget?.name}"? Esta acción no se puede deshacer.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={deleteTemplate}>
+              <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
