@@ -1,0 +1,278 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Trash2, Loader2, ClipboardList, Save, Wifi, Camera, Cable } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { ALL_FIELDS, FIELD_LABELS, DEFAULT_TEMPLATES, setCachedTemplates } from "@/lib/checklistTemplates";
+
+const DEVICE_ICONS = { ethernet: Cable, camara: Camera, access_point: Wifi };
+const DEVICE_LABELS = { ethernet: "Ethernet", camara: "Cámara CCTV", access_point: "Access Point" };
+
+export default function Templates() {
+  const { toast } = useToast();
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editTpl, setEditTpl] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("ethernet");
+
+  const load = async () => {
+    const t = await base44.entities.ChecklistTemplate.list("-created_date", 50);
+    setTemplates(t);
+    setCachedTemplates(t);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggleField = (tpl, category, field) => {
+    const current = tpl[category] || [];
+    const updated = current.includes(field) ? current.filter((f) => f !== field) : [...current, field];
+    setEditTpl({ ...tpl, [category]: updated });
+  };
+
+  const saveTemplate = async () => {
+    setSaving(true);
+    const { id, created_date, updated_date, created_by_id, ...data } = editTpl;
+    await base44.entities.ChecklistTemplate.update(editTpl.id, data);
+    toast({ title: "Plantilla guardada", description: "Los cambios se aplicaron correctamente." });
+    setSaving(false);
+    setEditTpl(null);
+    load();
+  };
+
+  const deleteTemplate = async (tpl) => {
+    if (!confirm(`¿Eliminar la plantilla "${tpl.name}"?`)) return;
+    await base44.entities.ChecklistTemplate.delete(tpl.id);
+    toast({ title: "Plantilla eliminada" });
+    load();
+  };
+
+  const createTemplate = async () => {
+    if (!newName.trim()) return;
+    const defaults = DEFAULT_TEMPLATES[newType];
+    await base44.entities.ChecklistTemplate.create({
+      name: newName.trim(),
+      device_type: newType,
+      activities: defaults.activities,
+      accessories: defaults.accessories,
+      equipment: defaults.equipment,
+      show_ponchado_type: defaults.showPonchadoType,
+      show_network: defaults.showNetwork,
+    });
+    toast({ title: "Plantilla creada" });
+    setCreateOpen(false);
+    setNewName("");
+    load();
+  };
+
+  const seedDefaults = async () => {
+    setSaving(true);
+    for (const [type, tpl] of Object.entries(DEFAULT_TEMPLATES)) {
+      await base44.entities.ChecklistTemplate.create({
+        name: tpl.label,
+        device_type: type,
+        activities: tpl.activities,
+        accessories: tpl.accessories,
+        equipment: tpl.equipment,
+        show_ponchado_type: tpl.showPonchadoType,
+        show_network: tpl.showNetwork,
+      });
+    }
+    toast({ title: "Plantillas por defecto creadas" });
+    setSaving(false);
+    load();
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Plantillas</h1>
+          <p className="text-muted-foreground text-sm mt-1">Define qué items aplica cada tipo de dispositivo</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-2" /> Nueva
+        </Button>
+      </div>
+
+      {templates.length === 0 ? (
+        <div className="bg-white rounded-xl border border-border p-8 text-center">
+          <ClipboardList className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground mb-4">No hay plantillas. ¿Crear las plantillas por defecto?</p>
+          <Button onClick={seedDefaults} disabled={saving} size="sm">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            Crear plantillas por defecto
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {templates.map((tpl) => {
+            const Icon = DEVICE_ICONS[tpl.device_type] || Cable;
+            const totalItems = (tpl.activities?.length || 0) + (tpl.accessories?.length || 0) + (tpl.equipment?.length || 0);
+            return (
+              <div key={tpl.id} className="bg-white rounded-xl border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{tpl.name}</p>
+                      <p className="text-xs text-muted-foreground">{DEVICE_LABELS[tpl.device_type]} · {totalItems} items</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => setEditTpl({ ...tpl })}>Editar</Button>
+                    <button onClick={() => deleteTemplate(tpl)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Actividades</p>
+                    <div className="space-y-1.5">
+                      {ALL_FIELDS.activities.map((f) => (
+                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.activities?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.activities?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                          {FIELD_LABELS[f]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Accesorios</p>
+                    <div className="space-y-1.5">
+                      {ALL_FIELDS.accessories.map((f) => (
+                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.accessories?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.accessories?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                          {FIELD_LABELS[f]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Equipo</p>
+                    <div className="space-y-1.5">
+                      {ALL_FIELDS.equipment.map((f) => (
+                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.equipment?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.equipment?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                          {FIELD_LABELS[f]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Edit dialog */}
+      <Dialog open={!!editTpl} onOpenChange={(open) => { if (!open) setEditTpl(null); }}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar plantilla</DialogTitle>
+          </DialogHeader>
+          {editTpl && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs mb-1.5 block">Nombre</Label>
+                  <Input value={editTpl.name} onChange={(e) => setEditTpl({ ...editTpl, name: e.target.value })} />
+                </div>
+                <div>
+                  <Label className="text-xs mb-1.5 block">Tipo</Label>
+                  <Select value={editTpl.device_type} onValueChange={(v) => setEditTpl({ ...editTpl, device_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ethernet">Ethernet</SelectItem>
+                      <SelectItem value="camara">Cámara CCTV</SelectItem>
+                      <SelectItem value="access_point">Access Point</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <FieldGroup title="Actividades" tpl={editTpl} category="activities" onToggle={toggleField} />
+              <FieldGroup title="Accesorios" tpl={editTpl} category="accessories" onToggle={toggleField} />
+              <FieldGroup title="Equipo" tpl={editTpl} category="equipment" onToggle={toggleField} />
+
+              <div className="space-y-3 pt-2 border-t border-border">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <Checkbox checked={!!editTpl.show_ponchado_type} onCheckedChange={(v) => setEditTpl({ ...editTpl, show_ponchado_type: v })} />
+                  <span className="text-sm">Mostrar tipo de ponchado (Jack / Z-Plug)</span>
+                </label>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <Checkbox checked={editTpl.show_network ?? true} onCheckedChange={(v) => setEditTpl({ ...editTpl, show_network: v })} />
+                  <span className="text-sm">Mostrar sección de red (Patch Panel, Switch, VLAN)</span>
+                </label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTpl(null)}>Cancelar</Button>
+            <Button onClick={saveTemplate} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Nueva plantilla</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-1.5 block">Nombre</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej: Ethernet especial" />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Tipo de dispositivo</Label>
+              <Select value={newType} onValueChange={setNewType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ethernet">Ethernet</SelectItem>
+                  <SelectItem value="camara">Cámara CCTV</SelectItem>
+                  <SelectItem value="access_point">Access Point</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={createTemplate} className="w-full">Crear</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function FieldGroup({ title, tpl, category, onToggle }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{title}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {ALL_FIELDS[category].map((field) => (
+          <label key={field} className="flex items-center gap-2.5 cursor-pointer">
+            <Checkbox checked={tpl[category]?.includes(field) || false} onCheckedChange={() => onToggle(tpl, category, field)} />
+            <span className="text-sm">{FIELD_LABELS[field]}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}

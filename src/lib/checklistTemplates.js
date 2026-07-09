@@ -1,7 +1,7 @@
-// Template definitions per device type
-// Each template defines which checklist sections and items apply to that device type.
+import { base44 } from "@/api/base44Client";
 
-export const TEMPLATES = {
+// Static defaults (used as fallback before DB loads)
+export const DEFAULT_TEMPLATES = {
   ethernet: {
     label: "Ethernet",
     activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
@@ -44,6 +44,43 @@ export const FIELD_LABELS = {
   ponchado_rack: "Ponchado e identificado en rack",
 };
 
+export const ALL_FIELDS = {
+  activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
+  accessories: ["acc_face_plate", "acc_tapa_face_plate", "acc_tornillos", "acc_rotulo", "acc_protector"],
+  equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "ponchado_rack"],
+};
+
+// In-memory cache — updated when templates load from DB
+let dbTemplates = null;
+
+export function setCachedTemplates(templates) {
+  dbTemplates = {};
+  for (const t of templates) {
+    dbTemplates[t.device_type] = {
+      label: t.name,
+      activities: t.activities || [],
+      showPonchadoType: t.show_ponchado_type ?? false,
+      accessories: t.accessories || [],
+      equipment: t.equipment || [],
+      showNetwork: t.show_network ?? true,
+    };
+  }
+}
+
+export async function loadTemplatesFromDB() {
+  try {
+    const templates = await base44.entities.ChecklistTemplate.list("-created_date", 50);
+    if (templates && templates.length > 0) {
+      setCachedTemplates(templates);
+    }
+  } catch (e) {
+    // fall back to static defaults
+  }
+}
+
 export function getTemplate(deviceType) {
-  return TEMPLATES[deviceType] || TEMPLATES.ethernet;
+  if (dbTemplates && dbTemplates[deviceType]) {
+    return dbTemplates[deviceType];
+  }
+  return DEFAULT_TEMPLATES[deviceType] || DEFAULT_TEMPLATES.ethernet;
 }

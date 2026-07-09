@@ -150,6 +150,7 @@ export default function Checklist() {
       </Section>
 
       {/* Network */}
+      {tpl.showNetwork && (
       <Section title="Red">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -166,6 +167,7 @@ export default function Checklist() {
           </div>
         </div>
       </Section>
+      )}
 
       {/* Observations */}
       <Section title="Observaciones">

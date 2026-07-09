@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { useEffect } from 'react';
 import ScrollToTop from './components/ScrollToTop';
 import Dashboard from './pages/Dashboard';
 import Floors from './pages/Floors';
@@ -12,10 +13,15 @@ import FloorDetail from './pages/FloorDetail';
 import Points from './pages/Points';
 import Checklist from './pages/Checklist';
 import Configuration from './pages/Configuration';
+import Templates from './pages/Templates';
 import AppLayout from './components/layout/AppLayout';
+import { loadTemplatesFromDB } from './lib/checklistTemplates';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+
+  // Load templates from DB on app start
+  useEffect(() => { loadTemplatesFromDB(); }, []);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -47,6 +53,7 @@ const AuthenticatedApp = () => {
         <Route path="/puntos" element={<Points />} />
         <Route path="/checklist/:pointId" element={<Checklist />} />
         <Route path="/configuracion" element={<Configuration />} />
+        <Route path="/plantillas" element={<Templates />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

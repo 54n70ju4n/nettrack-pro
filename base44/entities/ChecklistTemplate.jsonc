@@ -1,0 +1,54 @@
+{
+  "name": "ChecklistTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre de la plantilla"
+    },
+    "device_type": {
+      "type": "string",
+      "enum": [
+        "ethernet",
+        "camara",
+        "access_point"
+      ],
+      "description": "Tipo de dispositivo asociado"
+    },
+    "activities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Campos de actividades activas"
+    },
+    "accessories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Campos de accesorios activos"
+    },
+    "equipment": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Campos de equipo activos"
+    },
+    "show_ponchado_type": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mostrar selector de tipo de ponchado"
+    },
+    "show_network": {
+      "type": "boolean",
+      "default": true,
+      "description": "Mostrar secci\u00f3n de configuraci\u00f3n de red"
+    }
+  },
+  "required": [
+    "name",
+    "device_type"
+  ]
+}
