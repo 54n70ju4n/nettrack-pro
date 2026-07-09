@@ -54,6 +54,11 @@
               "accessories",
               "equipment"
             ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Si el item esta activo en el checklist"
           }
         },
         "required": [

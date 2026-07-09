@@ -42,11 +42,20 @@ export default function Templates() {
   const addCustomCheck = (tpl, category, label) => {
     if (!label.trim()) return;
     const id = "custom_" + Date.now();
-    setEditTpl({ ...tpl, custom_checks: [...(tpl.custom_checks || []), { id, label: label.trim(), category }] });
+    setEditTpl({ ...tpl, custom_checks: [...(tpl.custom_checks || []), { id, label: label.trim(), category, enabled: true }] });
   };
 
   const removeCustomCheck = (tpl, checkId) => {
     setEditTpl({ ...tpl, custom_checks: (tpl.custom_checks || []).filter((c) => c.id !== checkId) });
+  };
+
+  const toggleCustomCheck = (tpl, checkId) => {
+    setEditTpl({
+      ...tpl,
+      custom_checks: (tpl.custom_checks || []).map((c) =>
+        c.id === checkId ? { ...c, enabled: c.enabled === false } : c
+      ),
+    });
   };
 
   const saveTemplate = async () => {
@@ -134,7 +143,7 @@ export default function Templates() {
         <div className="space-y-3">
           {templates.map((tpl) => {
             const Icon = DEVICE_ICONS[tpl.device_type] || Cable;
-            const totalItems = (tpl.activities?.length || 0) + (tpl.accessories?.length || 0) + (tpl.equipment?.length || 0) + (tpl.custom_checks?.length || 0);
+            const totalItems = (tpl.activities?.length || 0) + (tpl.accessories?.length || 0) + (tpl.equipment?.length || 0) + (tpl.custom_checks?.filter((c) => c.enabled !== false).length || 0);
             return (
               <div key={tpl.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
@@ -167,12 +176,15 @@ export default function Templates() {
                             {FIELD_LABELS[f]}
                           </div>
                         ))}
-                        {(tpl.custom_checks || []).filter((c) => c.category === cat).map((c) => (
-                          <div key={c.id} className="flex items-center gap-2 text-sm text-foreground">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            {c.label}
-                          </div>
-                        ))}
+                        {(tpl.custom_checks || []).filter((c) => c.category === cat).map((c) => {
+                          const enabled = c.enabled !== false;
+                          return (
+                            <div key={c.id} className={`flex items-center gap-2 text-sm ${enabled ? "text-foreground" : "text-muted-foreground/50"}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${enabled ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                              {c.label}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -209,9 +221,9 @@ export default function Templates() {
                 </div>
               </div>
 
-              <FieldGroup title="Actividades" tpl={editTpl} category="activities" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
-              <FieldGroup title="Accesorios" tpl={editTpl} category="accessories" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
-              <FieldGroup title="Equipo" tpl={editTpl} category="equipment" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
+              <FieldGroup title="Actividades" tpl={editTpl} category="activities" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} onToggleCustom={toggleCustomCheck} />
+              <FieldGroup title="Accesorios" tpl={editTpl} category="accessories" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} onToggleCustom={toggleCustomCheck} />
+              <FieldGroup title="Equipo" tpl={editTpl} category="equipment" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} onToggleCustom={toggleCustomCheck} />
 
               <div className="space-y-3 pt-2 border-t border-border">
                 <label className="flex items-center gap-2.5 cursor-pointer">
@@ -276,7 +288,7 @@ export default function Templates() {
   );
 }
 
-function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCustom }) {
+function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCustom, onToggleCustom }) {
   const [newItem, setNewItem] = useState("");
   const customItems = (tpl.custom_checks || []).filter((c) => c.category === category);
 
@@ -300,17 +312,20 @@ function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCusto
             </div>
           );
         })}
-        {customItems.map((c) => (
-          <div key={c.id} className="flex items-center gap-2.5 h-8">
-            <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
-              <Checkbox checked disabled />
-              <span className="text-sm leading-none">{c.label}</span>
-            </label>
-            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemoveCustom(tpl, c.id); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 flex-shrink-0">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
+        {customItems.map((c) => {
+          const enabled = c.enabled !== false;
+          return (
+            <div key={c.id} className="flex items-center gap-2.5 h-8">
+              <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                <Checkbox checked={enabled} onCheckedChange={() => onToggleCustom(tpl, c.id)} />
+                <span className={`text-sm leading-none ${enabled ? "" : "text-muted-foreground/50"}`}>{c.label}</span>
+              </label>
+              <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemoveCustom(tpl, c.id); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
       </div>
       <div className="flex gap-2 mt-2">
         <Input

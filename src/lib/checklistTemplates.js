@@ -67,7 +67,7 @@ export function setCachedTemplates(templates) {
       accessories: t.accessories || [],
       equipment: t.equipment || [],
       showNetwork: t.show_network ?? true,
-      customChecks: t.custom_checks || [],
+      customChecks: (t.custom_checks || []).filter((c) => c.enabled !== false),
     };
   }
 }
