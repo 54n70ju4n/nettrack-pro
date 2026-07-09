@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function Checklist() {
   const { pointId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [point, setPoint] = useState(null);
   const [floor, setFloor] = useState(null);
@@ -44,6 +45,7 @@ export default function Checklist() {
     await base44.entities.InstallationPoint.update(pointId, data);
     toast({ title: "Guardado", description: "Los cambios se guardaron correctamente." });
     setSaving(false);
+    navigate(-1);
   };
 
   const uploadPhoto = async (e) => {
