@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Link } from "react-router-dom";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import ProgressRing from "@/components/shared/ProgressRing";
+import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
+import { getPointProgress } from "@/lib/pointProgress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, CheckCircle2, AlertCircle, Clock, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-react";
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#22c55e", "#f59e0b"];
 const STATUS_COLORS = { pendiente: "#94a3b8", en_proceso: "#f59e0b", finalizado: "#22c55e", con_observaciones: "#ef4444" };
 
 export default function Dashboard() {
   const [points, setPoints] = useState([]);
   const [floors, setFloors] = useState([]);
+  const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -22,9 +25,11 @@ export default function Dashboard() {
     Promise.all([
       base44.entities.InstallationPoint.list("-created_date", 500),
       base44.entities.Floor.list("order", 100),
-    ]).then(([p, f]) => {
+      base44.entities.Space.list("-created_date", 500),
+    ]).then(([p, f, s]) => {
       setPoints(p);
       setFloors(f);
+      setSpaces(s);
       setLoading(false);
     });
   }, []);
@@ -39,6 +44,8 @@ export default function Dashboard() {
   }, [points, filterFloor, filterStatus, filterTech]);
 
   const technicians = useMemo(() => [...new Set(points.map((p) => p.technician).filter(Boolean))], [points]);
+  const floorMap = useMemo(() => Object.fromEntries(floors.map((f) => [f.id, f.name])), [floors]);
+  const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
 
   const stats = useMemo(() => {
     const total = filtered.length;
@@ -50,11 +57,11 @@ export default function Dashboard() {
     return { total, finalizados, enProceso, pendientes, conObs, pct };
   }, [filtered]);
 
-  const floorData = useMemo(() => {
+  const floorProgress = useMemo(() => {
     return floors.map((f) => {
       const fp = filtered.filter((p) => p.floor_id === f.id);
       const done = fp.filter((p) => p.status === "finalizado").length;
-      return { name: f.name, total: fp.length, done, pct: fp.length ? Math.round((done / fp.length) * 100) : 0 };
+      return { id: f.id, name: f.name, total: fp.length, done, pct: fp.length ? Math.round((done / fp.length) * 100) : 0 };
     }).filter((f) => f.total > 0);
   }, [floors, filtered]);
 
@@ -76,6 +83,14 @@ export default function Dashboard() {
       { name: "Con obs.", value: stats.conObs, color: STATUS_COLORS.con_observaciones },
     ].filter((d) => d.value > 0);
   }, [stats]);
+
+  const incompletePoints = useMemo(() => {
+    return filtered
+      .filter((p) => p.status !== "finalizado")
+      .map((p) => ({ ...p, progress: getPointProgress(p) }))
+      .sort((a, b) => a.progress - b.progress)
+      .slice(0, 8);
+  }, [filtered]);
 
   if (loading) {
     return (
@@ -121,29 +136,33 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard icon={<ProgressRing percentage={stats.pct} size={56} strokeWidth={5} />} label="Avance general" value={`${Math.round(stats.pct)}%`} />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <KpiCard icon={<ProgressRing percentage={stats.pct} size={48} strokeWidth={5} />} label="Avance general" value={`${Math.round(stats.pct)}%`} />
         <KpiCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} label="Finalizados" value={stats.finalizados} sub={`de ${stats.total}`} color="bg-emerald-50" />
         <KpiCard icon={<Clock className="w-5 h-5 text-amber-600" />} label="En proceso" value={stats.enProceso} color="bg-amber-50" />
+        <KpiCard icon={<Clock className="w-5 h-5 text-slate-500" />} label="Pendientes" value={stats.pendientes} color="bg-slate-100" />
         <KpiCard icon={<AlertCircle className="w-5 h-5 text-red-500" />} label="Con observaciones" value={stats.conObs} color="bg-red-50" />
       </div>
 
-      {/* Charts */}
+      {/* Charts row */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Floor progress */}
+        {/* Floor progress bars */}
         <div className="bg-white rounded-xl border border-border p-5">
           <h3 className="font-heading font-semibold text-sm mb-4">Avance por piso</h3>
-          {floorData.length === 0 ? (
+          {floorProgress.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No hay datos aún</p>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={floorData} layout="vertical" margin={{ left: 4 }}>
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} className="text-xs" />
-                <YAxis type="category" dataKey="name" width={80} className="text-xs" />
-                <Tooltip formatter={(v) => `${v}%`} />
-                <Bar dataKey="pct" fill="#3b82f6" radius={[0, 6, 6, 0]} barSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-3">
+              {floorProgress.map((f) => (
+                <Link key={f.id} to={`/pisos/${f.id}`} className="block group">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium group-hover:text-primary transition-colors">{f.name}</span>
+                    <span className="text-xs text-muted-foreground">{f.done}/{f.total} · {f.pct}%</span>
+                  </div>
+                  <ProgressBar value={f.pct} />
+                </Link>
+              ))}
+            </div>
           )}
         </div>
 
@@ -186,11 +205,40 @@ export default function Dashboard() {
               <div>
                 <p className="font-medium text-sm">{d.name}</p>
                 <p className="text-xs text-muted-foreground">{d.done}/{d.total} completados</p>
+                <ProgressBar value={d.pct} className="mt-1.5 w-24" />
               </div>
             </div>
           ))}
           {deviceData.length === 0 && <p className="text-sm text-muted-foreground col-span-3 text-center py-4">No hay datos aún</p>}
         </div>
+      </div>
+
+      {/* Incomplete points */}
+      <div className="bg-white rounded-xl border border-border p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <ListTodo className="w-4 h-4 text-muted-foreground" />
+          <h3 className="font-heading font-semibold text-sm">Puntos por completar</h3>
+        </div>
+        {incompletePoints.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">¡Todo completado! No hay puntos pendientes.</p>
+        ) : (
+          <div className="space-y-2">
+            {incompletePoints.map((pt) => (
+              <Link key={pt.id} to={`/checklist/${pt.id}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors group">
+                <DeviceIcon type={pt.device_type} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{pt.name}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{pt.progress}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{floorMap[pt.floor_id] || "—"} · {spaceMap[pt.space_id] || "—"}</p>
+                  <ProgressBar value={pt.progress} className="mt-1.5" />
+                </div>
+                <StatusBadge status={pt.status} />
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -198,13 +246,13 @@ export default function Dashboard() {
 
 function KpiCard({ icon, label, value, sub, color }) {
   return (
-    <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-4">
-      <div className={`flex items-center justify-center rounded-xl ${color || ""}`}>
+    <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+      <div className={`flex items-center justify-center rounded-xl w-11 h-11 flex-shrink-0 ${color || ""}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-xl font-bold">{value} {sub && <span className="text-xs font-normal text-muted-foreground">{sub}</span>}</p>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        <p className="text-lg font-bold">{value} {sub && <span className="text-xs font-normal text-muted-foreground">{sub}</span>}</p>
       </div>
     </div>
   );

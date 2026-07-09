@@ -135,7 +135,7 @@ export default function Floors() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="text-right hidden sm:block mr-2">
+                    <div className="text-right mr-2">
                       <p className="text-sm font-semibold">{pct}%</p>
                       <div className="w-24 h-1.5 bg-muted rounded-full mt-1">
                         <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />

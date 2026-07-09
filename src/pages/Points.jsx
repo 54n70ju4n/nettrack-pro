@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import { Loader2, Search, ChevronRight, Pencil } from "lucide-react";
+import ProgressBar from "@/components/shared/ProgressBar";
+import { getPointProgress } from "@/lib/pointProgress";
 
 export default function Points() {
   const [points, setPoints] = useState([]);
@@ -114,27 +116,36 @@ export default function Points() {
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">No se encontraron puntos</p>
           ) : (
-            filtered.map((pt) => (
-              <Link key={pt.id} to={`/checklist/${pt.id}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 px-4 py-3 hover:bg-muted/30 transition-colors items-center">
-                <div className="col-span-3 flex items-center gap-2.5">
-                  <DeviceIcon type={pt.device_type} size="sm" />
-                  <span className="font-medium text-sm">{pt.name}</span>
+            filtered.map((pt) => {
+              const progress = getPointProgress(pt);
+              return (
+              <Link key={pt.id} to={`/checklist/${pt.id}`} className="block px-4 py-3 hover:bg-muted/30 transition-colors">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                  <div className="col-span-3 flex items-center gap-2.5">
+                    <DeviceIcon type={pt.device_type} size="sm" />
+                    <span className="font-medium text-sm">{pt.name}</span>
+                  </div>
+                  <div className="col-span-2 text-sm text-muted-foreground">{floorMap[pt.floor_id] || "—"}</div>
+                  <div className="col-span-2 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
+                  <div className="col-span-2 text-sm text-muted-foreground">{pt.technician || "—"}</div>
+                  <div className="col-span-2 flex items-center gap-2">
+                    <StatusBadge status={pt.status} />
+                    <span className="text-xs text-muted-foreground font-medium">{progress}%</span>
+                  </div>
+                  <div className="col-span-1 flex items-center justify-end gap-1">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <div className="col-span-2 text-sm text-muted-foreground">{floorMap[pt.floor_id] || "—"}</div>
-                <div className="col-span-2 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
-                <div className="col-span-2 text-sm text-muted-foreground">{pt.technician || "—"}</div>
-                <div className="col-span-2"><StatusBadge status={pt.status} /></div>
-                <div className="col-span-1 flex items-center justify-end gap-1">
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
+                <ProgressBar value={progress} className="mt-2" />
               </Link>
-            ))
+              );
+            })
           )}
         </div>
       </div>

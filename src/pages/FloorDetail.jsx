@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil } from "lucide-react";
+import ProgressBar from "@/components/shared/ProgressBar";
+import { getPointProgress } from "@/lib/pointProgress";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
@@ -165,7 +167,9 @@ export default function FloorDetail() {
                 </div>
                 {spacePoints.length > 0 && (
                   <div className="divide-y divide-border">
-                    {spacePoints.map((pt, ptIdx) => (
+                    {spacePoints.map((pt, ptIdx) => {
+                      const progress = getPointProgress(pt);
+                      return (
                       <Link
                         key={pt.id}
                         to={`/checklist/${pt.id}`}
@@ -173,8 +177,12 @@ export default function FloorDetail() {
                       >
                         <DeviceIcon type={pt.device_type} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{pt.name}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium">{pt.name}</p>
+                            <span className="text-xs text-muted-foreground font-medium">{progress}%</span>
+                          </div>
                           {pt.technician && <p className="text-xs text-muted-foreground">{pt.technician}</p>}
+                          <ProgressBar value={progress} className="mt-1.5 max-w-[140px]" />
                         </div>
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
@@ -185,7 +193,8 @@ export default function FloorDetail() {
                         <StatusBadge status={pt.status} />
                         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                       </Link>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
