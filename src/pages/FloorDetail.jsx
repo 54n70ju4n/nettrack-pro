@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
@@ -22,12 +22,63 @@ export default function FloorDetail() {
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [pointName, setPointName] = useState("");
   const [deviceType, setDeviceType] = useState("ethernet");
+  const [editFloorName, setEditFloorName] = useState(false);
+  const [floorEditVal, setFloorEditVal] = useState("");
+  const [editSpace, setEditSpace] = useState(null);
+  const [editSpaceName, setEditSpaceName] = useState("");
+  const [editPoint, setEditPoint] = useState(null);
+  const [editPointName, setEditPointName] = useState("");
+  const [editPointType, setEditPointType] = useState("ethernet");
+  const [editSpaceType, setEditSpaceType] = useState("habitacion");
+
+  const saveFloorName = async () => {
+    if (!floorEditVal.trim()) return;
+    await base44.entities.Floor.update(floorId, { name: floorEditVal.trim() });
+    setEditFloorName(false);
+    load();
+  };
+
+  const saveEditSpace = async () => {
+    if (!editSpaceName.trim()) return;
+    await base44.entities.Space.update(editSpace.id, { name: editSpaceName.trim(), space_type: editSpaceType });
+    setEditSpace(null);
+    load();
+  };
+
+  const saveEditPoint = async () => {
+    if (!editPointName.trim()) return;
+    await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
+    setEditPoint(null);
+    load();
+  };
+
+  const moveSpace = async (index, direction) => {
+    const newSpaces = [...spaces];
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= newSpaces.length) return;
+    [newSpaces[index], newSpaces[newIndex]] = [newSpaces[newIndex], newSpaces[index]];
+    setSpaces(newSpaces);
+    const updates = newSpaces.map((s, i) => base44.entities.Space.update(s.id, { order: i }));
+    await Promise.all(updates);
+    load();
+  };
+
+  const movePoint = async (spaceId, index, direction) => {
+    const spacePoints = points.filter((p) => p.space_id === spaceId);
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= spacePoints.length) return;
+    const reordered = [...spacePoints];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+    const updates = reordered.map((p, i) => base44.entities.InstallationPoint.update(p.id, { order: i }));
+    await Promise.all(updates);
+    load();
+  };
 
   const load = () => {
     Promise.all([
       base44.entities.Floor.get(floorId),
-      base44.entities.Space.filter({ floor_id: floorId }),
-      base44.entities.InstallationPoint.filter({ floor_id: floorId }),
+      base44.entities.Space.filter({ floor_id: floorId }, "order", 500),
+      base44.entities.InstallationPoint.filter({ floor_id: floorId }, "order", 500),
     ]).then(([f, s, p]) => {
       setFloor(f);
       setSpaces(s);
@@ -72,7 +123,15 @@ export default function FloorDetail() {
       <div className="flex items-center gap-3">
         <Link to="/pisos" className="p-2 rounded-lg hover:bg-muted"><ArrowLeft className="w-4 h-4" /></Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-heading font-bold tracking-tight">{floor?.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-heading font-bold tracking-tight">{floor?.name}</h1>
+            <button
+              onClick={() => { setFloorEditVal(floor?.name || ""); setEditFloorName(true); }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">{spaces.length} espacios · {points.length} puntos</p>
         </div>
         <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
@@ -86,7 +145,7 @@ export default function FloorDetail() {
         </div>
       ) : (
         <div className="space-y-4">
-          {spaces.map((s) => {
+          {spaces.map((s, spaceIdx) => {
             const spacePoints = points.filter((p) => p.space_id === s.id);
             const done = spacePoints.filter((p) => p.status === "finalizado").length;
             const pct = spacePoints.length ? Math.round((done / spacePoints.length) * 100) : 0;
@@ -94,14 +153,38 @@ export default function FloorDetail() {
             return (
               <div key={s.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-                  <div>
-                    <p className="font-medium text-sm">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {pct}% completado</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => moveSpace(spaceIdx, -1)}
+                        disabled={spaceIdx === 0}
+                        className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => moveSpace(spaceIdx, 1)}
+                        disabled={spaceIdx === spaces.length - 1}
+                        className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{s.name}</p>
+                      <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {pct}% completado</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-20 h-1.5 bg-muted rounded-full">
                       <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
                     </div>
+                    <button
+                      onClick={() => { setEditSpace(s); setEditSpaceName(s.name); setEditSpaceType(s.space_type || "habitacion"); }}
+                      className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button onClick={() => deleteSpace(s.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -109,17 +192,39 @@ export default function FloorDetail() {
                 </div>
                 {spacePoints.length > 0 && (
                   <div className="divide-y divide-border">
-                    {spacePoints.map((pt) => (
+                    {spacePoints.map((pt, ptIdx) => (
                       <Link
                         key={pt.id}
                         to={`/checklist/${pt.id}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group"
                       >
+                        <div className="flex flex-col">
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); movePoint(s.id, ptIdx, -1); }}
+                            disabled={ptIdx === 0}
+                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); movePoint(s.id, ptIdx, 1); }}
+                            disabled={ptIdx === spacePoints.length - 1}
+                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </div>
                         <DeviceIcon type={pt.device_type} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{pt.name}</p>
                           {pt.technician && <p className="text-xs text-muted-foreground">{pt.technician}</p>}
                         </div>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                         <StatusBadge status={pt.status} />
                         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                       </Link>
@@ -173,6 +278,56 @@ export default function FloorDetail() {
               </SelectContent>
             </Select>
             <Button onClick={addPoint} className="w-full">Crear punto</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Floor Name */}
+      <Dialog open={editFloorName} onOpenChange={setEditFloorName}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Editar piso</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input value={floorEditVal} onChange={(e) => setFloorEditVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveFloorName()} />
+            <Button onClick={saveFloorName} className="w-full">Guardar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Space */}
+      <Dialog open={!!editSpace} onOpenChange={(open) => { if (!open) setEditSpace(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Editar espacio</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input value={editSpaceName} onChange={(e) => setEditSpaceName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditSpace()} />
+            <Select value={editSpaceType} onValueChange={setEditSpaceType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="habitacion">Habitación</SelectItem>
+                <SelectItem value="pasillo">Pasillo</SelectItem>
+                <SelectItem value="sala">Sala</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={saveEditSpace} className="w-full">Guardar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Point */}
+      <Dialog open={!!editPoint} onOpenChange={(open) => { if (!open) setEditPoint(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Editar punto</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input value={editPointName} onChange={(e) => setEditPointName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditPoint()} />
+            <Select value={editPointType} onValueChange={setEditPointType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ethernet">Ethernet</SelectItem>
+                <SelectItem value="camara">Cámara CCTV</SelectItem>
+                <SelectItem value="access_point">AP WiFi</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>

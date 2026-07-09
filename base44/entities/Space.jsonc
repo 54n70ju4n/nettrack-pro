@@ -19,6 +19,10 @@
         "otro"
       ],
       "default": "habitacion"
+    },
+    "order": {
+      "type": "number",
+      "default": 0
     }
   },
   "required": [

@@ -35,6 +35,10 @@
       "type": "string",
       "description": "Nombre del t\u00e9cnico asignado"
     },
+    "order": {
+      "type": "number",
+      "default": 0
+    },
     "act_perforacion": {
       "type": "boolean",
       "default": false

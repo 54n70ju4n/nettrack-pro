@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Plus, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 
 export default function Floors() {
   const [floors, setFloors] = useState([]);
@@ -13,6 +13,26 @@ export default function Floors() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [floorName, setFloorName] = useState("");
+  const [editFloor, setEditFloor] = useState(null);
+  const [editName, setEditName] = useState("");
+
+  const saveEditFloor = async () => {
+    if (!editName.trim()) return;
+    await base44.entities.Floor.update(editFloor.id, { name: editName.trim() });
+    setEditFloor(null);
+    setEditName("");
+    load();
+  };
+
+  const moveFloor = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= floors.length) return;
+    const updates = [];
+    updates.push(base44.entities.Floor.update(floors[index].id, { order: floors[newIndex].order }));
+    updates.push(base44.entities.Floor.update(floors[newIndex].id, { order: floors[index].order }));
+    await Promise.all(updates);
+    load();
+  };
 
   const load = () => {
     Promise.all([
@@ -74,7 +94,7 @@ export default function Floors() {
         </div>
       ) : (
         <div className="space-y-2">
-          {floors.map((f) => {
+          {floors.map((f, idx) => {
             const floorSpaces = spaces.filter((s) => s.floor_id === f.id);
             const floorPoints = points.filter((p) => p.floor_id === f.id);
             const done = floorPoints.filter((p) => p.status === "finalizado").length;
@@ -88,6 +108,22 @@ export default function Floors() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); moveFloor(idx, -1); }}
+                        disabled={idx === 0}
+                        className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); moveFloor(idx, 1); }}
+                        disabled={idx === floors.length - 1}
+                        className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Building2 className="w-5 h-5 text-primary" />
                     </div>
@@ -98,20 +134,26 @@ export default function Floors() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
+                  <div className="flex items-center gap-1">
+                    <div className="text-right hidden sm:block mr-2">
                       <p className="text-sm font-semibold">{pct}%</p>
                       <div className="w-24 h-1.5 bg-muted rounded-full mt-1">
                         <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                     <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditFloor(f); setEditName(f.name); }}
+                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteFloor(f.id); }}
                       className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground ml-1" />
                   </div>
                 </div>
               </Link>
@@ -126,6 +168,16 @@ export default function Floors() {
           <div className="space-y-4">
             <Input placeholder="Nombre del piso (ej: Piso 1)" value={floorName} onChange={(e) => setFloorName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addFloor()} />
             <Button onClick={addFloor} className="w-full">Crear piso</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editFloor} onOpenChange={(open) => { if (!open) setEditFloor(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Editar piso</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditFloor()} />
+            <Button onClick={saveEditFloor} className="w-full">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
