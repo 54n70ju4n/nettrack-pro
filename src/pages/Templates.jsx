@@ -287,10 +287,10 @@ function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCusto
         {ALL_FIELDS[category].map((field) => {
           const checked = tpl[category]?.includes(field) || false;
           return (
-            <div key={field} className="flex items-center gap-2.5">
+            <div key={field} className="flex items-center gap-2.5 h-8">
               <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
                 <Checkbox checked={checked} onCheckedChange={() => onToggle(tpl, category, field)} />
-                <span className="text-sm">{FIELD_LABELS[field]}</span>
+                <span className="text-sm leading-none">{FIELD_LABELS[field]}</span>
               </label>
               {checked && (
                 <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(tpl, category, field); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 flex-shrink-0">
@@ -301,10 +301,10 @@ function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCusto
           );
         })}
         {customItems.map((c) => (
-          <div key={c.id} className="flex items-center gap-2.5">
+          <div key={c.id} className="flex items-center gap-2.5 h-8">
             <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
               <Checkbox checked disabled />
-              <span className="text-sm">{c.label}</span>
+              <span className="text-sm leading-none">{c.label}</span>
             </label>
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemoveCustom(tpl, c.id); }} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 flex-shrink-0">
               <X className="w-3.5 h-3.5" />
