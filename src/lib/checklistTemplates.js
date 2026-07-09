@@ -7,7 +7,7 @@ export const DEFAULT_TEMPLATES = {
     activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
     showPonchadoType: true,
     accessories: ["acc_face_plate", "acc_tapa_face_plate", "acc_tornillos", "acc_rotulo", "acc_protector"],
-    equipment: ["ponchado_rack", "funcionando"],
+    equipment: ["identificado_rack", "ponchado_rack", "funcionando"],
     showNetwork: true,
   },
   camara: {
@@ -15,7 +15,7 @@ export const DEFAULT_TEMPLATES = {
     activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
     showPonchadoType: true,
     accessories: ["acc_tornillos", "acc_rotulo"],
-    equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "ponchado_rack"],
+    equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "identificado_rack", "ponchado_rack"],
     showNetwork: true,
   },
   access_point: {
@@ -23,7 +23,7 @@ export const DEFAULT_TEMPLATES = {
     activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
     showPonchadoType: true,
     accessories: ["acc_tornillos", "acc_rotulo"],
-    equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "ponchado_rack"],
+    equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "identificado_rack", "ponchado_rack"],
     showNetwork: true,
   },
 };
@@ -41,13 +41,14 @@ export const FIELD_LABELS = {
   equipo_configurado: "Equipo configurado",
   equipo_probado: "Equipo probado",
   funcionando: "Funcionando correctamente",
-  ponchado_rack: "Ponchado e identificado en rack",
+  identificado_rack: "Identificado en rack",
+  ponchado_rack: "Ponchado en rack",
 };
 
 export const ALL_FIELDS = {
   activities: ["act_perforacion", "act_pesca_cable", "act_ponchado"],
   accessories: ["acc_face_plate", "acc_tapa_face_plate", "acc_tornillos", "acc_rotulo", "acc_protector"],
-  equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "ponchado_rack"],
+  equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "identificado_rack", "ponchado_rack"],
 };
 
 // In-memory cache — updated when templates load from DB

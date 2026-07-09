@@ -96,9 +96,15 @@
       "type": "boolean",
       "default": false
     },
+    "identificado_rack": {
+      "type": "boolean",
+      "default": false,
+      "description": "Identificado en rack"
+    },
     "ponchado_rack": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "Ponchado en rack"
     },
     "puerto_patch_panel": {
       "type": "string"
