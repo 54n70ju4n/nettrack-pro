@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil } from "lucide-react";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
@@ -52,28 +52,6 @@ export default function FloorDetail() {
     load();
   };
 
-  const moveSpace = async (index, direction) => {
-    const newSpaces = [...spaces];
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= newSpaces.length) return;
-    [newSpaces[index], newSpaces[newIndex]] = [newSpaces[newIndex], newSpaces[index]];
-    setSpaces(newSpaces);
-    const updates = newSpaces.map((s, i) => base44.entities.Space.update(s.id, { order: i }));
-    await Promise.all(updates);
-    load();
-  };
-
-  const movePoint = async (spaceId, index, direction) => {
-    const spacePoints = points.filter((p) => p.space_id === spaceId);
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= spacePoints.length) return;
-    const reordered = [...spacePoints];
-    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
-    const updates = reordered.map((p, i) => base44.entities.InstallationPoint.update(p.id, { order: i }));
-    await Promise.all(updates);
-    load();
-  };
-
   const load = () => {
     Promise.all([
       base44.entities.Floor.get(floorId),
@@ -88,6 +66,15 @@ export default function FloorDetail() {
   };
 
   useEffect(() => { load(); }, [floorId]);
+
+  const sortedSpaces = useMemo(() => {
+    const typeOrder = { habitacion: 0, sala: 1, pasillo: 2, otro: 99 };
+    return [...spaces].sort((a, b) => {
+      const typeDiff = (typeOrder[a.space_type] ?? 99) - (typeOrder[b.space_type] ?? 99);
+      if (typeDiff !== 0) return typeDiff;
+      return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [spaces]);
 
   const addSpace = async () => {
     if (!spaceName.trim()) return;
@@ -145,8 +132,10 @@ export default function FloorDetail() {
         </div>
       ) : (
         <div className="space-y-4">
-          {spaces.map((s, spaceIdx) => {
-            const spacePoints = points.filter((p) => p.space_id === s.id);
+          {sortedSpaces.map((s, spaceIdx) => {
+            const spacePoints = points
+              .filter((p) => p.space_id === s.id)
+              .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' }));
             const done = spacePoints.filter((p) => p.status === "finalizado").length;
             const pct = spacePoints.length ? Math.round((done / spacePoints.length) * 100) : 0;
 
@@ -154,22 +143,6 @@ export default function FloorDetail() {
               <div key={s.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                   <div className="flex items-center gap-2">
-                    <div className="flex flex-col">
-                      <button
-                        onClick={() => moveSpace(spaceIdx, -1)}
-                        disabled={spaceIdx === 0}
-                        className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => moveSpace(spaceIdx, 1)}
-                        disabled={spaceIdx === spaces.length - 1}
-                        className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
                     <div>
                       <p className="font-medium text-sm">{s.name}</p>
                       <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {pct}% completado</p>
@@ -196,24 +169,8 @@ export default function FloorDetail() {
                       <Link
                         key={pt.id}
                         to={`/checklist/${pt.id}`}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
                       >
-                        <div className="flex flex-col">
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); movePoint(s.id, ptIdx, -1); }}
-                            disabled={ptIdx === 0}
-                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
-                          >
-                            <ArrowUp className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); movePoint(s.id, ptIdx, 1); }}
-                            disabled={ptIdx === spacePoints.length - 1}
-                            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed"
-                          >
-                            <ArrowDown className="w-3 h-3" />
-                          </button>
-                        </div>
                         <DeviceIcon type={pt.device_type} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{pt.name}</p>
@@ -221,7 +178,7 @@ export default function FloorDetail() {
                         </div>
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
-                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -265,7 +222,7 @@ export default function FloorDetail() {
             <Select value={selectedSpace || ""} onValueChange={setSelectedSpace}>
               <SelectTrigger><SelectValue placeholder="Seleccionar espacio" /></SelectTrigger>
               <SelectContent>
-                {spaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {sortedSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Input placeholder="Nombre del punto (ej: ETH-01)" value={pointName} onChange={(e) => setPointName(e.target.value)} />
