@@ -55,6 +55,9 @@ export default function Configuration() {
             name: `ETH-${prefix}0${hab}-${e}`, floor_id: floor.id, space_id: s.id, device_type: "ethernet",
           });
         }
+        await base44.entities.InstallationPoint.create({
+          name: `AP-${prefix}0${hab}`, floor_id: floor.id, space_id: s.id, device_type: "access_point",
+        });
       }
 
       // Sala de Experiencia
