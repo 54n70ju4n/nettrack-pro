@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { Loader2, Search, ChevronRight, Pencil } from "lucide-react";
+import { Loader2, Search, ChevronRight, Pencil, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress } from "@/lib/pointProgress";
 
@@ -23,6 +23,22 @@ export default function Points() {
   const [editPoint, setEditPoint] = useState(null);
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ k }) => {
+    if (sortKey !== k) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
+  };
 
   const saveEditPoint = async () => {
     if (!editPointName.trim()) return;
@@ -49,14 +65,32 @@ export default function Points() {
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
 
   const filtered = useMemo(() => {
-    return points.filter((p) => {
+    const result = points.filter((p) => {
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
       if (filterStatus !== "all" && p.status !== filterStatus) return false;
       if (filterType !== "all" && p.device_type !== filterType) return false;
       return true;
     });
-  }, [points, search, filterFloor, filterStatus, filterType]);
+    if (!sortKey) return result;
+    const getVal = (p) => {
+      switch (sortKey) {
+        case "name": return (p.name || "").toLowerCase();
+        case "floor": return (floorMap[p.floor_id] || "").toLowerCase();
+        case "space": return (spaceMap[p.space_id] || "").toLowerCase();
+        case "technician": return (p.technician || "").toLowerCase();
+        case "status": return p.status || "";
+        case "progress": return getPointProgress(p);
+        default: return "";
+      }
+    };
+    return [...result].sort((a, b) => {
+      const va = getVal(a), vb = getVal(b);
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [points, search, filterFloor, filterStatus, filterType, sortKey, sortDir, floorMap, spaceMap]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -105,11 +139,11 @@ export default function Points() {
       <div className="bg-white rounded-xl border border-border overflow-hidden">
         {/* Table header */}
         <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          <div className="col-span-3">Punto</div>
-          <div className="col-span-2">Piso</div>
-          <div className="col-span-2">Espacio</div>
-          <div className="col-span-2">Técnico</div>
-          <div className="col-span-2">Estado</div>
+          <button onClick={() => toggleSort("name")} className="col-span-3 flex items-center gap-1 hover:text-foreground transition-colors text-left">Punto <SortIcon k="name" /></button>
+          <button onClick={() => toggleSort("floor")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Piso <SortIcon k="floor" /></button>
+          <button onClick={() => toggleSort("space")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Espacio <SortIcon k="space" /></button>
+          <button onClick={() => toggleSort("technician")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Técnico <SortIcon k="technician" /></button>
+          <button onClick={() => toggleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left">Estado <SortIcon k="status" /></button>
           <div className="col-span-1"></div>
         </div>
         <div className="divide-y divide-border">
