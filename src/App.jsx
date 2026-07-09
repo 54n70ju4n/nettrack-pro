@@ -6,7 +6,13 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-// Add page imports here
+import Dashboard from './pages/Dashboard';
+import Floors from './pages/Floors';
+import FloorDetail from './pages/FloorDetail';
+import Points from './pages/Points';
+import Checklist from './pages/Checklist';
+import Configuration from './pages/Configuration';
+import AppLayout from './components/layout/AppLayout';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -34,7 +40,14 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pisos" element={<Floors />} />
+        <Route path="/pisos/:floorId" element={<FloorDetail />} />
+        <Route path="/puntos" element={<Points />} />
+        <Route path="/checklist/:pointId" element={<Checklist />} />
+        <Route path="/configuracion" element={<Configuration />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

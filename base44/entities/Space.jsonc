@@ -1,0 +1,28 @@
+{
+  "name": "Space",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre del espacio (ej: Habitaci\u00f3n 201, Pasillo)"
+    },
+    "floor_id": {
+      "type": "string",
+      "description": "ID del piso al que pertenece"
+    },
+    "space_type": {
+      "type": "string",
+      "enum": [
+        "habitacion",
+        "pasillo",
+        "sala",
+        "otro"
+      ],
+      "default": "habitacion"
+    }
+  },
+  "required": [
+    "name",
+    "floor_id"
+  ]
+}
