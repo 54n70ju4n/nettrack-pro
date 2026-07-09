@@ -53,7 +53,7 @@ export default function Dashboard() {
     const enProceso = filtered.filter((p) => p.status === "en_proceso").length;
     const pendientes = filtered.filter((p) => p.status === "pendiente").length;
     const conObs = filtered.filter((p) => p.status === "con_observaciones").length;
-    const pct = total ? (finalizados / total) * 100 : 0;
+    const pct = total ? filtered.reduce((sum, p) => sum + getPointProgress(p), 0) / total : 0;
     return { total, finalizados, enProceso, pendientes, conObs, pct };
   }, [filtered]);
 
@@ -61,7 +61,8 @@ export default function Dashboard() {
     return floors.map((f) => {
       const fp = filtered.filter((p) => p.floor_id === f.id);
       const done = fp.filter((p) => p.status === "finalizado").length;
-      return { id: f.id, name: f.name, total: fp.length, done, pct: fp.length ? Math.round((done / fp.length) * 100) : 0 };
+      const pct = fp.length ? Math.round(fp.reduce((sum, p) => sum + getPointProgress(p), 0) / fp.length) : 0;
+      return { id: f.id, name: f.name, total: fp.length, done, pct };
     }).filter((f) => f.total > 0);
   }, [floors, filtered]);
 
@@ -71,7 +72,8 @@ export default function Dashboard() {
     return floorSpaces.map((s) => {
       const sp = filtered.filter((p) => p.space_id === s.id);
       const done = sp.filter((p) => p.status === "finalizado").length;
-      return { id: s.id, name: s.name, total: sp.length, done, pct: sp.length ? Math.round((done / sp.length) * 100) : 0 };
+      const pct = sp.length ? Math.round(sp.reduce((sum, p) => sum + getPointProgress(p), 0) / sp.length) : 0;
+      return { id: s.id, name: s.name, total: sp.length, done, pct };
     }).filter((s) => s.total > 0);
   }, [spaces, filtered, filterFloor]);
 
@@ -81,7 +83,8 @@ export default function Dashboard() {
     return types.map((t) => {
       const fp = filtered.filter((p) => p.device_type === t);
       const done = fp.filter((p) => p.status === "finalizado").length;
-      return { name: labels[t], total: fp.length, done, pct: fp.length ? Math.round((done / fp.length) * 100) : 0 };
+      const pct = fp.length ? Math.round(fp.reduce((sum, p) => sum + getPointProgress(p), 0) / fp.length) : 0;
+      return { name: labels[t], total: fp.length, done, pct };
     }).filter((d) => d.total > 0);
   }, [filtered]);
 
