@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import { getPointProgress } from "@/lib/pointProgress";
 
 export default function Floors() {
   const [floors, setFloors] = useState([]);
@@ -97,8 +98,8 @@ export default function Floors() {
           {floors.map((f, idx) => {
             const floorSpaces = spaces.filter((s) => s.floor_id === f.id);
             const floorPoints = points.filter((p) => p.floor_id === f.id);
-            const done = floorPoints.filter((p) => p.status === "finalizado").length;
-            const pct = floorPoints.length ? Math.round((done / floorPoints.length) * 100) : 0;
+            const floorProgresses = floorPoints.map((p) => getPointProgress(p));
+            const pct = floorProgresses.length ? Math.round(floorProgresses.reduce((a, b) => a + b, 0) / floorProgresses.length) : 0;
 
             return (
               <Link

@@ -138,8 +138,8 @@ export default function FloorDetail() {
             const spacePoints = points
               .filter((p) => p.space_id === s.id)
               .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' }));
-            const done = spacePoints.filter((p) => p.status === "finalizado").length;
-            const pct = spacePoints.length ? Math.round((done / spacePoints.length) * 100) : 0;
+            const pointProgresses = spacePoints.map((p) => getPointProgress(p));
+            const avgProgress = pointProgresses.length ? Math.round(pointProgresses.reduce((a, b) => a + b, 0) / pointProgresses.length) : 0;
 
             return (
               <div key={s.id} className="bg-white rounded-xl border border-border overflow-hidden">
@@ -147,12 +147,12 @@ export default function FloorDetail() {
                   <div className="flex items-center gap-2">
                     <div>
                       <p className="font-medium text-sm">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {pct}% completado</p>
+                      <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {avgProgress}% completado</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-28 h-2 bg-muted rounded-full">
-                      <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${avgProgress}%` }} />
                     </div>
                     <button
                       onClick={() => { setEditSpace(s); setEditSpaceName(s.name); setEditSpaceType(s.space_type || "habitacion"); }}
