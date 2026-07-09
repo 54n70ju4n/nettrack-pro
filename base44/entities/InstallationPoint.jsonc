@@ -106,6 +106,13 @@
       "default": false,
       "description": "Ponchado en rack"
     },
+    "custom_checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "description": "Estado de items personalizados {check_id: true/false}"
+    },
     "puerto_patch_panel": {
       "type": "string"
     },

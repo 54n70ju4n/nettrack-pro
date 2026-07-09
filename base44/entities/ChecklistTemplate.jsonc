@@ -36,6 +36,34 @@
       },
       "description": "Campos de equipo activos"
     },
+    "custom_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "activities",
+              "accessories",
+              "equipment"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "category"
+        ]
+      },
+      "description": "Items personalizados agregados a la plantilla"
+    },
     "show_ponchado_type": {
       "type": "boolean",
       "default": false,

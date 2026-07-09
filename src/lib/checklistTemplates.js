@@ -9,6 +9,7 @@ export const DEFAULT_TEMPLATES = {
     accessories: ["acc_face_plate", "acc_tapa_face_plate", "acc_tornillos", "acc_rotulo", "acc_protector"],
     equipment: ["identificado_rack", "ponchado_rack", "funcionando"],
     showNetwork: true,
+    customChecks: [],
   },
   camara: {
     label: "Cámara CCTV",
@@ -17,6 +18,7 @@ export const DEFAULT_TEMPLATES = {
     accessories: ["acc_tornillos", "acc_rotulo"],
     equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "identificado_rack", "ponchado_rack"],
     showNetwork: true,
+    customChecks: [],
   },
   access_point: {
     label: "Access Point WiFi",
@@ -25,6 +27,7 @@ export const DEFAULT_TEMPLATES = {
     accessories: ["acc_tornillos", "acc_rotulo"],
     equipment: ["equipo_instalado", "equipo_configurado", "equipo_probado", "funcionando", "identificado_rack", "ponchado_rack"],
     showNetwork: true,
+    customChecks: [],
   },
 };
 
@@ -64,6 +67,7 @@ export function setCachedTemplates(templates) {
       accessories: t.accessories || [],
       equipment: t.equipment || [],
       showNetwork: t.show_network ?? true,
+      customChecks: t.custom_checks || [],
     };
   }
 }

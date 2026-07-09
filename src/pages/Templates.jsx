@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Loader2, ClipboardList, Save, Wifi, Camera, Cable } from "lucide-react";
+import { Plus, Trash2, Loader2, ClipboardList, Save, Wifi, Camera, Cable, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ALL_FIELDS, FIELD_LABELS, DEFAULT_TEMPLATES, setCachedTemplates } from "@/lib/checklistTemplates";
 
@@ -38,6 +38,16 @@ export default function Templates() {
     setEditTpl({ ...tpl, [category]: updated });
   };
 
+  const addCustomCheck = (tpl, category, label) => {
+    if (!label.trim()) return;
+    const id = "custom_" + Date.now();
+    setEditTpl({ ...tpl, custom_checks: [...(tpl.custom_checks || []), { id, label: label.trim(), category }] });
+  };
+
+  const removeCustomCheck = (tpl, checkId) => {
+    setEditTpl({ ...tpl, custom_checks: (tpl.custom_checks || []).filter((c) => c.id !== checkId) });
+  };
+
   const saveTemplate = async () => {
     setSaving(true);
     const { id, created_date, updated_date, created_by_id, ...data } = editTpl;
@@ -66,6 +76,7 @@ export default function Templates() {
       equipment: defaults.equipment,
       show_ponchado_type: defaults.showPonchadoType,
       show_network: defaults.showNetwork,
+      custom_checks: [],
     });
     toast({ title: "Plantilla creada" });
     setCreateOpen(false);
@@ -84,6 +95,7 @@ export default function Templates() {
         equipment: tpl.equipment,
         show_ponchado_type: tpl.showPonchadoType,
         show_network: tpl.showNetwork,
+        custom_checks: [],
       });
     }
     toast({ title: "Plantillas por defecto creadas" });
@@ -120,7 +132,7 @@ export default function Templates() {
         <div className="space-y-3">
           {templates.map((tpl) => {
             const Icon = DEVICE_ICONS[tpl.device_type] || Cable;
-            const totalItems = (tpl.activities?.length || 0) + (tpl.accessories?.length || 0) + (tpl.equipment?.length || 0);
+            const totalItems = (tpl.activities?.length || 0) + (tpl.accessories?.length || 0) + (tpl.equipment?.length || 0) + (tpl.custom_checks?.length || 0);
             return (
               <div key={tpl.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
@@ -141,39 +153,27 @@ export default function Templates() {
                   </div>
                 </div>
                 <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Actividades</p>
-                    <div className="space-y-1.5">
-                      {ALL_FIELDS.activities.map((f) => (
-                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.activities?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.activities?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
-                          {FIELD_LABELS[f]}
-                        </div>
-                      ))}
+                  {["activities", "accessories", "equipment"].map((cat) => (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                        {cat === "activities" ? "Actividades" : cat === "accessories" ? "Accesorios" : "Equipo"}
+                      </p>
+                      <div className="space-y-1.5">
+                        {ALL_FIELDS[cat].map((f) => (
+                          <div key={f} className={`flex items-center gap-2 text-sm ${tpl[cat]?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${tpl[cat]?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
+                            {FIELD_LABELS[f]}
+                          </div>
+                        ))}
+                        {(tpl.custom_checks || []).filter((c) => c.category === cat).map((c) => (
+                          <div key={c.id} className="flex items-center gap-2 text-sm text-foreground">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            {c.label}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Accesorios</p>
-                    <div className="space-y-1.5">
-                      {ALL_FIELDS.accessories.map((f) => (
-                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.accessories?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.accessories?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
-                          {FIELD_LABELS[f]}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Equipo</p>
-                    <div className="space-y-1.5">
-                      {ALL_FIELDS.equipment.map((f) => (
-                        <div key={f} className={`flex items-center gap-2 text-sm ${tpl.equipment?.includes(f) ? "text-foreground" : "text-muted-foreground/50"}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${tpl.equipment?.includes(f) ? "bg-primary" : "bg-muted-foreground/20"}`} />
-                          {FIELD_LABELS[f]}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             );
@@ -207,9 +207,9 @@ export default function Templates() {
                 </div>
               </div>
 
-              <FieldGroup title="Actividades" tpl={editTpl} category="activities" onToggle={toggleField} />
-              <FieldGroup title="Accesorios" tpl={editTpl} category="accessories" onToggle={toggleField} />
-              <FieldGroup title="Equipo" tpl={editTpl} category="equipment" onToggle={toggleField} />
+              <FieldGroup title="Actividades" tpl={editTpl} category="activities" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
+              <FieldGroup title="Accesorios" tpl={editTpl} category="accessories" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
+              <FieldGroup title="Equipo" tpl={editTpl} category="equipment" onToggle={toggleField} onAddCustom={addCustomCheck} onRemoveCustom={removeCustomCheck} />
 
               <div className="space-y-3 pt-2 border-t border-border">
                 <label className="flex items-center gap-2.5 cursor-pointer">
@@ -261,7 +261,10 @@ export default function Templates() {
   );
 }
 
-function FieldGroup({ title, tpl, category, onToggle }) {
+function FieldGroup({ title, tpl, category, onToggle, onAddCustom, onRemoveCustom }) {
+  const [newItem, setNewItem] = useState("");
+  const customItems = (tpl.custom_checks || []).filter((c) => c.category === category);
+
   return (
     <div>
       <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">{title}</p>
@@ -272,6 +275,37 @@ function FieldGroup({ title, tpl, category, onToggle }) {
             <span className="text-sm">{FIELD_LABELS[field]}</span>
           </label>
         ))}
+      </div>
+      {customItems.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pt-2 border-t border-border">
+          {customItems.map((c) => (
+            <div key={c.id} className="flex items-center gap-2.5">
+              <Checkbox checked disabled />
+              <span className="text-sm flex-1">{c.label}</span>
+              <button onClick={() => onRemoveCustom(tpl, c.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2 mt-2">
+        <Input
+          value={newItem}
+          onChange={(e) => setNewItem(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onAddCustom(tpl, category, newItem); setNewItem(""); } }}
+          placeholder={`Agregar ${title.toLowerCase()}...`}
+          className="h-8 text-sm"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 px-2"
+          onClick={() => { onAddCustom(tpl, category, newItem); setNewItem(""); }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
       </div>
     </div>
   );

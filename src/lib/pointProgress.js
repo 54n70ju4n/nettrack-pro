@@ -10,7 +10,10 @@ export function getPointProgress(point) {
     ...tpl.accessories,
     ...tpl.equipment,
   ];
+  const customChecks = tpl.customChecks || [];
 
   const done = fields.filter((f) => point[f]).length;
-  return fields.length ? Math.round((done / fields.length) * 100) : 0;
+  const customDone = customChecks.filter((c) => point.custom_checks?.[c.id]).length;
+  const total = fields.length + customChecks.length;
+  return total ? Math.round(((done + customDone) / total) * 100) : 0;
 }

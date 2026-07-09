@@ -126,15 +126,21 @@ export default function Checklist() {
               )}
             </div>
           ))}
+          {(tpl.customChecks || []).filter((c) => c.category === "activities").map((c) => (
+            <CheckItem key={c.id} label={c.label} checked={form.custom_checks?.[c.id]} onChange={(v) => update("custom_checks", { ...(form.custom_checks || {}), [c.id]: v })} />
+          ))}
         </div>
       </Section>
 
       {/* Accessories */}
-      {tpl.accessories.length > 0 && (
+      {(tpl.accessories.length > 0 || (tpl.customChecks || []).some((c) => c.category === "accessories")) && (
         <Section title="Accesorios">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {tpl.accessories.map((field) => (
               <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+            ))}
+            {(tpl.customChecks || []).filter((c) => c.category === "accessories").map((c) => (
+              <CheckItem key={c.id} label={c.label} checked={form.custom_checks?.[c.id]} onChange={(v) => update("custom_checks", { ...(form.custom_checks || {}), [c.id]: v })} />
             ))}
           </div>
         </Section>
@@ -145,6 +151,9 @@ export default function Checklist() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {tpl.equipment.map((field) => (
             <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+          ))}
+          {(tpl.customChecks || []).filter((c) => c.category === "equipment").map((c) => (
+            <CheckItem key={c.id} label={c.label} checked={form.custom_checks?.[c.id]} onChange={(v) => update("custom_checks", { ...(form.custom_checks || {}), [c.id]: v })} />
           ))}
         </div>
       </Section>
