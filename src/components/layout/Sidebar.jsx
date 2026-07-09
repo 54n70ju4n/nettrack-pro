@@ -1,12 +1,11 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, ClipboardCheck, Settings, X, Network } from "lucide-react";
+import { LayoutDashboard, Building2, Settings, X, Network } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Pisos", path: "/pisos", icon: Building2 },
   { label: "Puntos", path: "/puntos", icon: Network },
-  { label: "Checklist", path: "/puntos", icon: ClipboardCheck },
   { label: "Configuración", path: "/configuracion", icon: Settings },
 ];
 
