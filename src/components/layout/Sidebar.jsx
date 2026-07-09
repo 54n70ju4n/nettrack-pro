@@ -6,7 +6,7 @@ const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Pisos", path: "/pisos", icon: Building2 },
   { label: "Puntos", path: "/puntos", icon: Network },
-  { label: "Checklist", path: "/checklist", icon: ClipboardCheck },
+  { label: "Checklist", path: "/puntos", icon: ClipboardCheck },
   { label: "Configuración", path: "/configuracion", icon: Settings },
 ];
 
