@@ -3,9 +3,11 @@ import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { Loader2, Search, ChevronRight } from "lucide-react";
+import { Loader2, Search, ChevronRight, Pencil } from "lucide-react";
 
 export default function Points() {
   const [points, setPoints] = useState([]);
@@ -16,6 +18,17 @@ export default function Points() {
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [editPoint, setEditPoint] = useState(null);
+  const [editPointName, setEditPointName] = useState("");
+  const [editPointType, setEditPointType] = useState("ethernet");
+
+  const saveEditPoint = async () => {
+    if (!editPointName.trim()) return;
+    await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
+    setEditPoint(null);
+    const p = await base44.entities.InstallationPoint.list("-created_date", 500);
+    setPoints(p);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -111,12 +124,38 @@ export default function Points() {
                 <div className="col-span-2 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
                 <div className="col-span-2 text-sm text-muted-foreground">{pt.technician || "—"}</div>
                 <div className="col-span-2"><StatusBadge status={pt.status} /></div>
-                <div className="col-span-1 flex justify-end"><ChevronRight className="w-4 h-4 text-muted-foreground" /></div>
+                <div className="col-span-1 flex items-center justify-end gap-1">
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </div>
               </Link>
             ))
           )}
         </div>
       </div>
+
+      <Dialog open={!!editPoint} onOpenChange={(open) => { if (!open) setEditPoint(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Editar punto</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input value={editPointName} onChange={(e) => setEditPointName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditPoint()} />
+            <Select value={editPointType} onValueChange={setEditPointType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ethernet">Ethernet</SelectItem>
+                <SelectItem value="camara">Cámara CCTV</SelectItem>
+                <SelectItem value="access_point">AP WiFi</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
