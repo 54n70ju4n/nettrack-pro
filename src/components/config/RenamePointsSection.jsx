@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Wand2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -12,6 +13,10 @@ import { useFloors, useSpaces, usePoints, useInvalidateData } from "@/lib/querie
 import DataError from "@/components/shared/DataError";
 
 const DEVICE_CODE = { ethernet: "ETH", camara: "CAM", access_point: "AP" };
+const NO_SPACE = "none"; // bucket for points without an associated space -> pasillo
+
+// Words to skip when abbreviating a space name, so "Sala de Experiencia" -> EXP.
+const STOP_WORDS = new Set(["sala", "de", "del", "la", "el", "los", "las", "un", "una", "y", "area"]);
 
 // Digits of the floor name: "Piso 2" -> "2", "P4" -> "4".
 function floorNum(floor) {
@@ -19,13 +24,16 @@ function floorNum(floor) {
   return m ? m[0] : null;
 }
 
-// Numeric space name stays as-is; text becomes its first 3 letters, upper-cased
-// and accent-stripped: "201" -> "201", "Pasillo" -> "PAS", "Exposición" -> "EXP".
-function spaceCode(space) {
-  const name = (space?.name || "").trim();
-  if (/^\d+$/.test(name)) return name;
-  const letters = name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z]/g, "");
-  return (letters.slice(0, 3) || "ESP").toUpperCase();
+// Suggested code for a space name: numeric names are kept as-is (201 -> 201);
+// text names use the first 3 letters of the first meaningful word, accent-stripped
+// ("Sala de Experiencia" -> EXP, "Sala de Juntas" -> JUN, "Pasillo" -> PAS).
+function autoCode(name) {
+  const raw = (name || "").trim();
+  if (/^\d+$/.test(raw)) return raw;
+  const clean = raw.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const words = clean.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).filter((w) => !STOP_WORDS.has(w));
+  const first = words[0] || clean.replace(/[^a-z0-9]/gi, "") || "ESP";
+  return first.slice(0, 3).toUpperCase();
 }
 
 export default function RenamePointsSection() {
@@ -42,15 +50,37 @@ export default function RenamePointsSection() {
   const [applying, setApplying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [filterFloor, setFilterFloor] = useState("all");
+  const [codeOverrides, setCodeOverrides] = useState({}); // spaceKey -> manual code
+
+  // Distinct spaces actually used by points (+ a pasillo bucket for space-less points).
+  const spaceMeta = useMemo(() => {
+    const spaceById = Object.fromEntries(spaces.map((s) => [s.id, s]));
+    const map = new Map();
+    for (const p of points) {
+      const key = p.space_id || NO_SPACE;
+      if (map.has(key)) continue;
+      if (key === NO_SPACE) {
+        map.set(key, { key, label: "Pasillo (puntos sin espacio)", defaultCode: "PAS" });
+      } else {
+        const s = spaceById[key];
+        map.set(key, { key, label: s?.name || "(espacio desconocido)", defaultCode: autoCode(s?.name) });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+  }, [points, spaces]);
+
+  const codeFor = useMemo(() => {
+    const defaults = Object.fromEntries(spaceMeta.map((m) => [m.key, m.defaultCode]));
+    return (key) => (codeOverrides[key] ?? defaults[key] ?? "ESP");
+  }, [spaceMeta, codeOverrides]);
 
   const { rows, warnings } = useMemo(() => {
     const floorById = Object.fromEntries(floors.map((f) => [f.id, f]));
-    const spaceById = Object.fromEntries(spaces.map((s) => [s.id, s]));
 
-    // Group by floor + space + device type so numbering restarts per group.
+    // Group by floor + space (or pasillo bucket) + device so numbering restarts per group.
     const groups = new Map();
     for (const p of points) {
-      const key = `${p.floor_id}|${p.space_id}|${p.device_type}`;
+      const key = `${p.floor_id}|${p.space_id || NO_SPACE}|${p.device_type}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(p);
     }
@@ -62,15 +92,12 @@ export default function RenamePointsSection() {
         (a.name || "").localeCompare(b.name || "", undefined, { numeric: true }));
       pts.forEach((p, i) => {
         const f = floorById[p.floor_id];
-        const s = spaceById[p.space_id];
         const fn = floorNum(f);
         const dc = DEVICE_CODE[p.device_type] || (p.device_type || "DEV").slice(0, 3).toUpperCase();
+        const sc = codeFor(p.space_id || NO_SPACE);
         if (!f) warn.add(`Un punto no tiene piso asociado y se omitirá.`);
         else if (fn === null) warn.add(`El piso "${f.name}" no tiene un número en su nombre.`);
-        if (!s) warn.add(`Un punto no tiene espacio asociado y se omitirá.`);
-        newNameById[p.id] = (f && s && fn !== null)
-          ? `P${fn}-${spaceCode(s)}-${dc}${i + 1}`
-          : null; // can't build a valid name
+        newNameById[p.id] = (f && fn !== null) ? `P${fn}-${sc}-${dc}${i + 1}` : null;
       });
     }
 
@@ -80,13 +107,15 @@ export default function RenamePointsSection() {
       .sort((a, b) => (a.neu || a.old || "").localeCompare(b.neu || b.old || "", undefined, { numeric: true }));
 
     return { rows, warnings: [...warn] };
-  }, [points, floors, spaces]);
+  }, [points, floors, codeFor]);
 
   const visibleRows = useMemo(
     () => (filterFloor === "all" ? rows : rows.filter((r) => r.floor_id === filterFloor)),
     [rows, filterFloor]
   );
   const changes = visibleRows.filter((r) => r.changed);
+
+  const setCode = (key, value) => setCodeOverrides((prev) => ({ ...prev, [key]: value.toUpperCase() }));
 
   const apply = async () => {
     setApplying(true);
@@ -131,14 +160,39 @@ export default function RenamePointsSection() {
             <h3 className="font-heading font-semibold text-sm">Renombrar puntos de instalación</h3>
             <p className="text-xs text-muted-foreground mt-1">
               Aplica el formato <span className="font-mono">P&lt;piso&gt;-&lt;espacio&gt;-&lt;DISPOSITIVO&gt;&lt;n&gt;</span> a
-              todos los puntos (ej: <span className="font-mono">P2-201-ETH1</span>). El número de piso sale de su nombre,
-              el código de espacio es el número tal cual o las 3 primeras letras, y la numeración reinicia por espacio y tipo.
+              todos los puntos (ej: <span className="font-mono">P2-201-ETH1</span>). El piso sale de su nombre; el código de
+              cada espacio se puede ajustar abajo; los puntos sin espacio se tratan como pasillo (<span className="font-mono">PAS</span>);
+              la numeración reinicia por espacio y tipo de dispositivo.
             </p>
           </div>
         </div>
+      </div>
 
+      {/* Editable space codes */}
+      <div className="bg-white rounded-xl border border-border p-5">
+        <h3 className="font-heading font-semibold text-sm mb-1">Códigos de espacio</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Sugeridos automáticamente. Corrige cualquiera antes de aplicar (ej: Sala de Experiencia → EXP).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {spaceMeta.map((m) => (
+            <div key={m.key} className="flex items-center gap-2">
+              <span className="flex-1 min-w-0 truncate text-sm">{m.label}</span>
+              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <Input
+                value={codeFor(m.key)}
+                onChange={(e) => setCode(m.key, e.target.value)}
+                className="w-24 h-8 font-mono text-sm uppercase"
+                maxLength={8}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-border p-5">
         {warnings.length > 0 && (
-          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-3">
             <div className="flex items-center gap-1.5 text-amber-700 text-xs font-medium mb-1">
               <AlertTriangle className="w-3.5 h-3.5" /> Advertencias
             </div>
@@ -148,7 +202,7 @@ export default function RenamePointsSection() {
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Select value={filterFloor} onValueChange={setFilterFloor}>
               <SelectTrigger className="w-44"><SelectValue placeholder="Piso" /></SelectTrigger>
