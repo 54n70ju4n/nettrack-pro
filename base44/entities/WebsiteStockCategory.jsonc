@@ -1,0 +1,71 @@
+{
+  "name": "WebsiteStockCategory",
+  "type": "object",
+  "properties": {
+    "category_name": {
+      "type": "string",
+      "description": "Display name of this stock category (English)"
+    },
+    "category_name_pl": {
+      "type": "string",
+      "description": "Polish display name (shown when PL language is selected)"
+    },
+    "category_description": {
+      "type": "string",
+      "description": "Description shown to customers on the public page (English)"
+    },
+    "category_description_pl": {
+      "type": "string",
+      "description": "Polish description shown when PL language is selected"
+    },
+    "display_image_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos of this category of stock"
+    },
+    "min_price_display": {
+      "type": "number",
+      "description": "Lowest price for this category (in the region's currency)"
+    },
+    "max_price_display": {
+      "type": "number",
+      "description": "Highest price for this category (in the region's currency)"
+    },
+    "estimated_retail_value": {
+      "type": "string",
+      "description": "Free text retail value estimate e.g. Est. \u00a35,000+"
+    },
+    "associated_suppliers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Pallet.supplier values that belong to this category"
+    },
+    "region": {
+      "type": "string",
+      "enum": [
+        "UK",
+        "Poland",
+        "Both"
+      ],
+      "default": "UK",
+      "description": "Which region this category is visible in"
+    },
+    "is_publicly_visible": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this category appears on the public stock page"
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order on the public page (lower = first)"
+    }
+  },
+  "required": [
+    "category_name"
+  ]
+}

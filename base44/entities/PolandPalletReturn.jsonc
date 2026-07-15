@@ -1,0 +1,91 @@
+{
+  "name": "PolandPalletReturn",
+  "type": "object",
+  "properties": {
+    "return_code": {
+      "type": "string",
+      "description": "Unique return reference (e.g. PL-RET-000001)"
+    },
+    "sale_id": {
+      "type": "string",
+      "description": "FK to PolandPalletSale"
+    },
+    "sale_code": {
+      "type": "string",
+      "description": "Sale reference code (copied for display)"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "return_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "returned_pallet_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of PolandPallet record IDs that were returned"
+    },
+    "returned_pallet_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of human-readable Poland pallet IDs (e.g. PL-P000001)"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "CustomerRequest",
+        "Damaged",
+        "WrongItem",
+        "ChangeOfMind",
+        "Other"
+      ]
+    },
+    "reason_notes": {
+      "type": "string"
+    },
+    "refund_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "EUR"
+    },
+    "refund_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "BankTransfer"
+      ]
+    },
+    "is_full_return": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if all pallets in the sale were returned"
+    },
+    "processed_by_user_id": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "return_code",
+    "sale_id",
+    "return_date",
+    "reason",
+    "refund_amount"
+  ]
+}

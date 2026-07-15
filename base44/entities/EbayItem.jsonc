@@ -1,0 +1,180 @@
+{
+  "name": "EbayItem",
+  "type": "object",
+  "properties": {
+    "belta_id": {
+      "type": "string",
+      "description": "Unique Belta internal reference (e.g. B-001234)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Item title/description"
+    },
+    "location": {
+      "type": "string",
+      "description": "Physical storage location of the item"
+    },
+    "category": {
+      "type": "string",
+      "description": "Item category"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "Swap",
+        "PalletBreakdown",
+        "Other"
+      ],
+      "description": "Where the item came from"
+    },
+    "condition_grade": {
+      "type": "string",
+      "enum": [
+        "New",
+        "LikeNew",
+        "Good",
+        "Fair",
+        "ForParts"
+      ],
+      "description": "Item condition"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "TO_LIST",
+        "LISTED",
+        "POSTAGE",
+        "SOLD",
+        "RETURNED",
+        "CANCELLED"
+      ],
+      "default": "TO_LIST",
+      "description": "Current workflow status"
+    },
+    "listing_outcome": {
+      "type": "string",
+      "enum": [
+        "READY_TO_LIST",
+        "UNLISTABLE"
+      ],
+      "default": "READY_TO_LIST",
+      "description": "Whether item can be listed"
+    },
+    "unlistable_reason": {
+      "type": "string",
+      "description": "Reason item cannot be listed"
+    },
+    "product_url": {
+      "type": "string",
+      "description": "URL to the product web page (e.g. manufacturer or retailer link)"
+    },
+    "box_weight": {
+      "type": "string",
+      "description": "Shipping box weight"
+    },
+    "box_width_cm": {
+      "type": "number",
+      "description": "Box width in centimeters"
+    },
+    "box_height_cm": {
+      "type": "number",
+      "description": "Box height in centimeters"
+    },
+    "box_depth_cm": {
+      "type": "number",
+      "description": "Box depth in centimeters"
+    },
+    "list_price": {
+      "type": "number",
+      "description": "Listed price on eBay"
+    },
+    "due_by": {
+      "type": "string",
+      "format": "date",
+      "description": "Target listing date (optional)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes"
+    },
+    "ebay_listing_id": {
+      "type": "string",
+      "description": "eBay listing number"
+    },
+    "listed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When item was listed"
+    },
+    "sold_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When item was sold"
+    },
+    "sold_price": {
+      "type": "number",
+      "description": "Actual sale price"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "BankTransfer",
+        "EbayManagedPayments"
+      ]
+    },
+    "ebay_fees": {
+      "type": "number",
+      "default": 0
+    },
+    "postage_cost": {
+      "type": "number",
+      "default": 0
+    },
+    "packaging_cost": {
+      "type": "number",
+      "default": 0
+    },
+    "other_costs": {
+      "type": "number",
+      "default": 0
+    },
+    "refund_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "is_refunded": {
+      "type": "boolean",
+      "default": false
+    },
+    "item_cost": {
+      "type": "number",
+      "description": "Cost basis for profit calculation"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Soft delete flag"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When item was deleted"
+    },
+    "deleted_by_staff_user_id": {
+      "type": "string",
+      "description": "Staff user ID who deleted this item"
+    },
+    "deleted_reason": {
+      "type": "string",
+      "description": "Reason for deletion"
+    }
+  },
+  "required": [
+    "belta_id",
+    "title",
+    "source",
+    "status"
+  ]
+}

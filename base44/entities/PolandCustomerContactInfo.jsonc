@@ -1,0 +1,22 @@
+{
+  "name": "PolandCustomerContactInfo",
+  "type": "object",
+  "properties": {
+    "phone": {
+      "type": "string",
+      "description": "Customer phone number (unique key)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "last_contacted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the contact button was last tapped"
+    }
+  },
+  "required": [
+    "phone"
+  ]
+}

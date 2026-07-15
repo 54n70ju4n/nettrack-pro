@@ -1,0 +1,27 @@
+{
+  "name": "PolandCashWithdrawal",
+  "type": "object",
+  "properties": {
+    "amount": {
+      "type": "number",
+      "description": "Amount withdrawn (EUR)"
+    },
+    "withdrawn_by": {
+      "type": "string",
+      "description": "Name of person who withdrew"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "week_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date of the Monday that starts the week this withdrawal belongs to"
+    }
+  },
+  "required": [
+    "amount",
+    "week_start_date"
+  ]
+}

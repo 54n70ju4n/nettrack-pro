@@ -1,0 +1,45 @@
+{
+  "name": "AuditTrail",
+  "type": "object",
+  "properties": {
+    "entity_name": {
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "CREATE",
+        "UPDATE",
+        "DELETE",
+        "SOFT_DELETE",
+        "IMPORT"
+      ]
+    },
+    "field_name": {
+      "type": "string"
+    },
+    "old_value": {
+      "type": "string"
+    },
+    "new_value": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "meta_json": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "entity_name",
+    "record_id",
+    "action"
+  ]
+}

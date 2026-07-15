@@ -1,0 +1,180 @@
+{
+  "name": "PalletSale",
+  "type": "object",
+  "properties": {
+    "sale_code": {
+      "type": "string",
+      "description": "Human-readable code (e.g. S-000456)"
+    },
+    "sale_date_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sold_by_name": {
+      "type": "string",
+      "enum": [
+        "Mikey",
+        "Callum"
+      ],
+      "description": "Who created/made the sale"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name_free_text": {
+      "type": "string"
+    },
+    "customer_phone_free_text": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Reserved",
+        "PartPaid",
+        "Paid",
+        "Completed",
+        "Cancelled",
+        "Refunded",
+        "PartialRefund"
+      ],
+      "default": "Reserved"
+    },
+    "expected_price_total": {
+      "type": "number"
+    },
+    "sale_price_total": {
+      "type": "number"
+    },
+    "delivery_charge": {
+      "type": "number",
+      "default": 0,
+      "description": "Delivery charge added on top of sale price (GBP)"
+    },
+    "deposit_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "amount_paid_total": {
+      "type": "number",
+      "default": 0
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "BankTransfer",
+        "Mixed"
+      ]
+    },
+    "mixed_cash_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Cash portion of the payment when payment_method is Mixed (GBP)"
+    },
+    "mixed_card_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Card portion of the payment when payment_method is Mixed (GBP)"
+    },
+    "collection_or_delivery": {
+      "type": "string",
+      "enum": [
+        "Collection",
+        "Delivery"
+      ]
+    },
+    "delivery_house_number": {
+      "type": "string",
+      "description": "House number or name"
+    },
+    "delivery_street": {
+      "type": "string",
+      "description": "Street name"
+    },
+    "delivery_line2": {
+      "type": "string",
+      "description": "Address line 2 (optional)"
+    },
+    "delivery_town": {
+      "type": "string",
+      "description": "Town or city"
+    },
+    "delivery_postcode": {
+      "type": "string",
+      "description": "Postcode"
+    },
+    "delivery_completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When delivery was marked completed by driver"
+    },
+    "delivery_completed_by": {
+      "type": "string",
+      "description": "StaffUser ID who completed the delivery"
+    },
+    "delivery_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Actual date and time of delivery as entered by driver"
+    },
+    "delivery_photo_1_url": {
+      "type": "string",
+      "description": "Photo 1 - Sales sheet signed by customer"
+    },
+    "delivery_photo_2_url": {
+      "type": "string",
+      "description": "Photo 2 - Pallet side 1"
+    },
+    "delivery_photo_3_url": {
+      "type": "string",
+      "description": "Photo 3 - Pallet side 2"
+    },
+    "delivery_photo_4_url": {
+      "type": "string",
+      "description": "Photo 4 - Pallet side 3"
+    },
+    "delivery_photo_5_url": {
+      "type": "string",
+      "description": "Photo 5 - Pallet side 4"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "pallets_cost_total": {
+      "type": "number",
+      "default": 0
+    },
+    "gross_profit": {
+      "type": "number",
+      "default": 0
+    },
+    "outstanding": {
+      "type": "number",
+      "default": 0
+    },
+    "created_by_user_id": {
+      "type": "string"
+    },
+    "updated_by_user_id": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted_by_user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "sale_code",
+    "sale_date_time",
+    "status"
+  ]
+}

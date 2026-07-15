@@ -1,0 +1,57 @@
+{
+  "name": "StaffTarget",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "StaffUser ID this target applies to"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of staff (cached for reporting)"
+    },
+    "metric_key": {
+      "type": "string",
+      "enum": [
+        "BOXES_CHECKED",
+        "ITEMS_LISTED",
+        "SALES_COMPLETED"
+      ],
+      "description": "Which metric this target is for"
+    },
+    "period": {
+      "type": "string",
+      "enum": [
+        "DAILY",
+        "WEEKLY"
+      ],
+      "default": "DAILY",
+      "description": "Time period for the target"
+    },
+    "target_value": {
+      "type": "number",
+      "description": "Target number to achieve"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this target is currently active"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "When this target becomes active"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "When this target expires (optional)"
+    }
+  },
+  "required": [
+    "user_id",
+    "metric_key",
+    "period",
+    "target_value"
+  ]
+}

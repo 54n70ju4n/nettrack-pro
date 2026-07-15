@@ -1,0 +1,53 @@
+{
+  "name": "MysteryBoxSale",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "description": "Auto-generated invoice number e.g. MBI-000001"
+    },
+    "sale_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Number of mystery boxes sold"
+    },
+    "qty_paid": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of boxes paid for so far (lump sum payments)"
+    },
+    "price_per_box": {
+      "type": "number",
+      "default": 20,
+      "description": "Price per box in GBP"
+    },
+    "total_price": {
+      "type": "number",
+      "description": "Total sale value (qty x price_per_box)"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "BankTransfer"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "invoice_number",
+    "sale_date",
+    "quantity",
+    "price_per_box"
+  ]
+}

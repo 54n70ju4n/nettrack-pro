@@ -1,0 +1,27 @@
+{
+  "name": "Location",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Location name (e.g. Bay A1, Showroom)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "WarehouseBay",
+        "Showroom",
+        "Office",
+        "Other"
+      ]
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "type"
+  ]
+}

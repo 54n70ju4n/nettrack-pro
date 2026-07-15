@@ -1,0 +1,95 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Task title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional task description"
+    },
+    "assigned_to_user_id": {
+      "type": "string",
+      "description": "FK to StaffUser"
+    },
+    "assigned_to_name": {
+      "type": "string"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the task is due (YYYY-MM-DD)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "InProgress",
+        "Completed",
+        "Overdue"
+      ],
+      "default": "Pending"
+    },
+    "linked_pallet_id": {
+      "type": "string",
+      "description": "Optional FK to Pallet"
+    },
+    "linked_pallet_code": {
+      "type": "string",
+      "description": "Human-readable pallet ID e.g. BBK-P000123"
+    },
+    "require_photo": {
+      "type": "boolean",
+      "default": false
+    },
+    "require_note": {
+      "type": "boolean",
+      "default": false
+    },
+    "require_scan": {
+      "type": "boolean",
+      "default": false
+    },
+    "require_quantity": {
+      "type": "boolean",
+      "default": false
+    },
+    "completion_photo_url": {
+      "type": "string"
+    },
+    "completion_note": {
+      "type": "string"
+    },
+    "completion_scan": {
+      "type": "string"
+    },
+    "completion_quantity": {
+      "type": "number"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by_user_id": {
+      "type": "string"
+    },
+    "completed_by_name": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "title",
+    "assigned_to_user_id",
+    "due_date"
+  ]
+}

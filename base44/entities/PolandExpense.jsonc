@@ -1,0 +1,58 @@
+{
+  "name": "PolandExpense",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Rent",
+        "Fuel",
+        "Packaging",
+        "Tools",
+        "Insurance",
+        "Other"
+      ]
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "description": "EUR"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "BankTransfer"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "created_by_user_id": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted_by_user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "category",
+    "amount"
+  ]
+}

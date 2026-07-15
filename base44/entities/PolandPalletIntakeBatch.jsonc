@@ -1,0 +1,91 @@
+{
+  "name": "PolandPalletIntakeBatch",
+  "type": "object",
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "description": "Unique human-readable batch ID (e.g. PL-BATCH-000001)"
+    },
+    "number_of_pallets": {
+      "type": "number"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "supplier_reference": {
+      "type": "string",
+      "description": "Supplier's own reference number"
+    },
+    "grade": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "Mixed",
+        "Other"
+      ]
+    },
+    "cost_mode": {
+      "type": "string",
+      "enum": [
+        "PER_PALLET",
+        "TOTAL_COST"
+      ]
+    },
+    "cost_value": {
+      "type": "number",
+      "description": "Cost entered by user in EUR (per pallet or total depending on mode)"
+    },
+    "computed_cost_per_pallet": {
+      "type": "number"
+    },
+    "arrival_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "batch_reference": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "supplier_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the supplier has been paid for this batch"
+    },
+    "supplier_paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the supplier was paid"
+    },
+    "labels_pdf_url": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "StaffUser ID"
+    },
+    "is_cancelled": {
+      "type": "boolean",
+      "default": false
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancelled_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "batch_id",
+    "number_of_pallets",
+    "supplier",
+    "grade",
+    "cost_mode",
+    "cost_value",
+    "arrival_date"
+  ]
+}

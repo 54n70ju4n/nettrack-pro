@@ -1,0 +1,248 @@
+{
+  "name": "Pallet",
+  "type": "object",
+  "properties": {
+    "pallet_id": {
+      "type": "string",
+      "description": "Unique pallet identifier (e.g. BBK-P000123)"
+    },
+    "pallet_code": {
+      "type": "string",
+      "description": "Legacy code field (deprecated, use pallet_id)"
+    },
+    "arrival_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "supplier": {
+      "type": "string",
+      "default": "Costway"
+    },
+    "supplier_reference": {
+      "type": "string",
+      "description": "Supplier's own reference number for this pallet"
+    },
+    "retail_value": {
+      "type": "number",
+      "description": "Retail value of the pallet contents (GBP)"
+    },
+    "grade": {
+      "type": "string",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "Other"
+      ]
+    },
+    "batch_ref": {
+      "type": "string"
+    },
+    "cost_per_pallet": {
+      "type": "number",
+      "description": "Cost in GBP"
+    },
+    "selling_price": {
+      "type": "number",
+      "description": "Optional selling price when marked sold (GBP)"
+    },
+    "manifest_url": {
+      "type": "string",
+      "description": "URL link to the pallet manifest document"
+    },
+    "sold_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When pallet was marked sold"
+    },
+    "sold_by": {
+      "type": "string",
+      "description": "StaffUser ID who marked it sold"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Available",
+        "Reserved",
+        "Sold",
+        "Dispatched",
+        "Delivered",
+        "AllocatedToEbay",
+        "Teardown",
+        "Cancelled"
+      ],
+      "default": "Available"
+    },
+    "intake_batch_id": {
+      "type": "string",
+      "description": "FK to PalletIntakeBatch"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "is_cancelled": {
+      "type": "boolean",
+      "default": false
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancelled_by": {
+      "type": "string"
+    },
+    "reserved_customer_name": {
+      "type": "string"
+    },
+    "reserved_customer_phone": {
+      "type": "string"
+    },
+    "reserved_deposit_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "reserved_deposit_method": {
+      "type": "string",
+      "enum": [
+        "Cash",
+        "Card",
+        "Transfer",
+        "Other"
+      ]
+    },
+    "reserved_notes": {
+      "type": "string"
+    },
+    "reserved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reserved_by": {
+      "type": "string",
+      "description": "StaffUser ID"
+    },
+    "reserved_is_active": {
+      "type": "boolean",
+      "default": false
+    },
+    "reverse_deposit_outcome": {
+      "type": "string",
+      "enum": [
+        "Refunded",
+        "Kept",
+        "PartRefund"
+      ]
+    },
+    "reverse_refund_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "reverse_reason": {
+      "type": "string",
+      "enum": [
+        "CustomerCancelled",
+        "NoShow",
+        "ReservationExpired",
+        "Other"
+      ]
+    },
+    "reversed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reversed_by": {
+      "type": "string",
+      "description": "StaffUser ID"
+    },
+    "dispatch_session_id": {
+      "type": "string",
+      "description": "FK to DispatchSession"
+    },
+    "dispatched_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dispatched_by": {
+      "type": "string",
+      "description": "StaffUser ID"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivered_by": {
+      "type": "string",
+      "description": "StaffUser ID"
+    },
+    "delivery_failed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether delivery attempt failed"
+    },
+    "delivery_fail_reason": {
+      "type": "string",
+      "description": "Reason for failed delivery"
+    },
+    "delivery_fail_notes": {
+      "type": "string",
+      "description": "Additional notes about failed delivery"
+    },
+    "teardown_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When pallet was marked as torn down"
+    },
+    "teardown_by": {
+      "type": "string",
+      "description": "StaffUser ID who marked it as teardown"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted_by": {
+      "type": "string"
+    },
+    "delete_reason": {
+      "type": "string",
+      "description": "Reason for soft deletion"
+    },
+    "delete_note": {
+      "type": "string",
+      "description": "Additional notes about deletion"
+    },
+    "audit_status": {
+      "type": "string",
+      "enum": [
+        "Unchecked",
+        "Checked",
+        "Missing"
+      ],
+      "default": "Unchecked",
+      "description": "Status from stock audit"
+    },
+    "audit_session_id": {
+      "type": "string",
+      "description": "FK to StockAuditSession"
+    },
+    "audit_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When pallet was last audited"
+    },
+    "audited_by": {
+      "type": "string",
+      "description": "StaffUser ID who performed the audit"
+    }
+  },
+  "required": [
+    "pallet_id",
+    "arrival_date",
+    "grade",
+    "cost_per_pallet"
+  ]
+}

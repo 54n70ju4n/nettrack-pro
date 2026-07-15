@@ -1,0 +1,118 @@
+{
+  "name": "EbayOrder",
+  "type": "object",
+  "properties": {
+    "ebay_order_id": {
+      "type": "string"
+    },
+    "ebay_line_item_id": {
+      "type": "string"
+    },
+    "sale_date_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "buyer_username": {
+      "type": "string"
+    },
+    "ebay_listing_id": {
+      "type": "string"
+    },
+    "ebay_item_id": {
+      "type": "string",
+      "description": "FK to EbayItem"
+    },
+    "qty": {
+      "type": "number",
+      "default": 1
+    },
+    "item_price": {
+      "type": "number"
+    },
+    "postage_charged": {
+      "type": "number",
+      "default": 0
+    },
+    "fees_total": {
+      "type": "number",
+      "default": 0
+    },
+    "postage_cost_actual": {
+      "type": "number",
+      "default": 0
+    },
+    "net_revenue": {
+      "type": "number",
+      "default": 0
+    },
+    "net_profit": {
+      "type": "number",
+      "default": 0
+    },
+    "item_cost_allocated": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Sold",
+        "PartRefunded",
+        "Refunded"
+      ],
+      "default": "Sold"
+    },
+    "import_source": {
+      "type": "string",
+      "enum": [
+        "Manual",
+        "CSV_Orders",
+        "CSV_Payouts"
+      ]
+    },
+    "import_batch_id": {
+      "type": "string"
+    },
+    "dedupe_key": {
+      "type": "string"
+    },
+    "duplicate_flag": {
+      "type": "boolean",
+      "default": false
+    },
+    "duplicate_reason": {
+      "type": "string"
+    },
+    "duplicate_resolution": {
+      "type": "string",
+      "enum": [
+        "Unreviewed",
+        "ConfirmedDuplicate",
+        "NotDuplicate"
+      ],
+      "default": "Unreviewed"
+    },
+    "created_by_user_id": {
+      "type": "string"
+    },
+    "updated_by_user_id": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted_by_user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ebay_order_id",
+    "sale_date_time",
+    "item_price"
+  ]
+}

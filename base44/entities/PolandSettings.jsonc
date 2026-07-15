@@ -1,0 +1,74 @@
+{
+  "name": "PolandSettings",
+  "type": "object",
+  "properties": {
+    "business_name": {
+      "type": "string",
+      "default": "Belta Bulk Poland"
+    },
+    "business_name_pl": {
+      "type": "string",
+      "description": "Polish trading name"
+    },
+    "trading_address": {
+      "type": "string"
+    },
+    "trading_address_pl": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "vat_registered": {
+      "type": "boolean",
+      "default": false
+    },
+    "vat_number_pl": {
+      "type": "string",
+      "description": "Polish NIP / EU VAT number"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 23,
+      "description": "VAT rate percentage (Poland standard 23%)"
+    },
+    "bank_name": {
+      "type": "string"
+    },
+    "bank_iban": {
+      "type": "string"
+    },
+    "bank_swift": {
+      "type": "string"
+    },
+    "invoice_footer_text": {
+      "type": "string",
+      "description": "Bilingual footer text printed on Poland invoices"
+    },
+    "default_payment_terms": {
+      "type": "string"
+    },
+    "default_sale_notes": {
+      "type": "string"
+    },
+    "default_return_notes": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR"
+    },
+    "currency_symbol": {
+      "type": "string",
+      "default": "\u20ac"
+    },
+    "default_language": {
+      "type": "string",
+      "default": "EN-PL"
+    }
+  },
+  "required": []
+}

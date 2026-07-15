@@ -1,0 +1,81 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Customer's name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "email": {
+      "type": "string",
+      "description": "Customer email (optional)"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "Facebook",
+        "TikTok",
+        "WhatsApp",
+        "SMS"
+      ],
+      "description": "Platform the conversation took place on"
+    },
+    "buyer_type": {
+      "type": "string",
+      "enum": [
+        "Truckloads",
+        "Pallets"
+      ],
+      "description": "Type of buyer - interested in truckloads or pallets"
+    },
+    "profile_link": {
+      "type": "string",
+      "description": "Link to the customer's social media profile"
+    },
+    "supplier_interest": {
+      "type": "string",
+      "description": "Supplier/type of stock they were interested in"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Conversation notes, quoted prices etc."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Converted",
+        "Lost"
+      ],
+      "default": "Active"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date to follow up with the customer"
+    },
+    "converted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lost_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lost_reason": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "customer_name",
+    "platform"
+  ]
+}

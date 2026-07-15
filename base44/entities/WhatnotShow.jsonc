@@ -1,0 +1,82 @@
+{
+  "name": "WhatnotShow",
+  "type": "object",
+  "properties": {
+    "show_name": {
+      "type": "string",
+      "description": "Name of the Whatnot show"
+    },
+    "show_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date and time of the show"
+    },
+    "show_length_minutes": {
+      "type": "number",
+      "description": "Duration of the show in total minutes"
+    },
+    "earnings_after_fees": {
+      "type": "number",
+      "description": "Total earnings after Whatnot fees (\u00a3)",
+      "default": 0
+    },
+    "total_items_ran": {
+      "type": "number",
+      "description": "Total number of items run in the show",
+      "default": 0
+    },
+    "total_items_sold": {
+      "type": "number",
+      "description": "Total number of items sold in the show",
+      "default": 0
+    },
+    "cost_per_item": {
+      "type": "number",
+      "description": "Average cost per item (\u00a3) \u2014 kept for legacy compatibility",
+      "default": 5.5
+    },
+    "cost_tiers_json": {
+      "type": "string",
+      "description": "JSON array of cost tiers: [{qty, price}] \u2014 source of truth for item type breakdowns"
+    },
+    "peak_viewers": {
+      "type": "number",
+      "description": "Peak concurrent viewers during the show"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the show"
+    },
+    "total_cost": {
+      "type": "number",
+      "description": "Calculated: sum of all tier costs",
+      "default": 0
+    },
+    "profit": {
+      "type": "number",
+      "description": "Calculated: Earnings After Fees \u2212 Total Cost",
+      "default": 0
+    },
+    "average_sale_price": {
+      "type": "number",
+      "description": "Calculated: Earnings After Fees \u00f7 Total Items Sold",
+      "default": 0
+    },
+    "sell_through_rate": {
+      "type": "number",
+      "description": "Calculated: (Total Items Sold \u00f7 Total Items Ran) \u00d7 100",
+      "default": 0
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "show_name",
+    "show_date",
+    "earnings_after_fees",
+    "total_items_ran",
+    "total_items_sold"
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "name": "TruckLoad",
+  "type": "object",
+  "properties": {
+    "display_id": {
+      "type": "string",
+      "description": "Human-readable reference e.g. TL-0001"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ShippingQuote",
+        "ToQuote",
+        "Inquiry",
+        "Confirmed",
+        "InTransit",
+        "Delivered"
+      ],
+      "default": "ShippingQuote"
+    },
+    "load_type_id": {
+      "type": "string",
+      "description": "FK to TruckLoadType"
+    },
+    "load_type_name": {
+      "type": "string",
+      "description": "Snapshot of load type name"
+    },
+    "load_type_collection_postcode": {
+      "type": "string",
+      "description": "Snapshot of collection postcode at time of enquiry"
+    },
+    "load_type_use_jagar_shipping": {
+      "type": "boolean",
+      "default": false,
+      "description": "Snapshot of use_jagar_shipping from TruckLoadType at time of enquiry"
+    },
+    "is_jagar": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, VAT (20%) is applied to the full invoice total (load + delivery)"
+    },
+    "cost_price": {
+      "type": "number",
+      "description": "Cost of the truck load (GBP)"
+    },
+    "sell_price": {
+      "type": "number",
+      "description": "Selling price to the customer (GBP)"
+    },
+    "delivery_price": {
+      "type": "number",
+      "description": "Delivery/transport cost quoted by shipping company (GBP)",
+      "default": 0
+    },
+    "delivery_top_up": {
+      "type": "number",
+      "description": "Internal top-up added to delivery charge before quoting customer (GBP, ex-VAT)",
+      "default": 0
+    },
+    "supplier_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the supplier has been paid for this load"
+    },
+    "shipping_quote_price": {
+      "type": "number",
+      "description": "Price quoted by the shipping company (GBP)"
+    },
+    "shipping_window_from": {
+      "type": "string",
+      "format": "date",
+      "description": "Earliest delivery date offered by shipping company"
+    },
+    "shipping_window_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Latest delivery date offered by shipping company"
+    },
+    "shipping_quoted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the shipping company submitted their quote"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_company": {
+      "type": "string",
+      "description": "Company name (optional)"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "delivery_house_number": {
+      "type": "string"
+    },
+    "delivery_street": {
+      "type": "string"
+    },
+    "delivery_line2": {
+      "type": "string"
+    },
+    "delivery_town": {
+      "type": "string"
+    },
+    "delivery_county": {
+      "type": "string",
+      "description": "State / County"
+    },
+    "delivery_postcode": {
+      "type": "string"
+    },
+    "delivery_country": {
+      "type": "string",
+      "description": "Country"
+    },
+    "collection_or_delivery": {
+      "type": "string",
+      "enum": [
+        "Collection",
+        "Delivery"
+      ],
+      "default": "Delivery"
+    },
+    "delivery_address_type": {
+      "type": "string",
+      "enum": [
+        "Home",
+        "Business"
+      ],
+      "description": "Whether delivery is to a home or business address"
+    },
+    "requires_tailgate": {
+      "type": "boolean",
+      "default": false,
+      "description": "Does the customer require a tailgated truck?"
+    },
+    "has_forklift_or_unloading": {
+      "type": "string",
+      "enum": [
+        "Forklift",
+        "Manual Unloading",
+        "Neither"
+      ],
+      "description": "Does the customer have a forklift or unloading equipment?"
+    },
+    "load_description": {
+      "type": "string",
+      "description": "Description of what's in the truck load"
+    },
+    "delivery_notes": {
+      "type": "string",
+      "description": "Special delivery instructions from the customer"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "inquiry_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "in_transit_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delivered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "quote_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the WhatsApp quote was last sent"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "customer_name",
+    "status"
+  ]
+}

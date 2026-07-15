@@ -1,0 +1,35 @@
+{
+  "name": "PolandWagesWeekly",
+  "type": "object",
+  "properties": {
+    "week_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "total_wages": {
+      "type": "number",
+      "description": "EUR"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "created_by_user_id": {
+      "type": "string"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "deleted_by_user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "week_start_date",
+    "total_wages"
+  ]
+}

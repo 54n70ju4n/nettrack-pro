@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress } from "@/lib/pointProgress";
+import { exportFloorPdf } from "@/lib/exportFloorPdf";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
@@ -32,6 +33,8 @@ export default function FloorDetail() {
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
   const [editSpaceType, setEditSpaceType] = useState("habitacion");
+
+  const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
 
   const saveFloorName = async () => {
     if (!floorEditVal.trim()) return;
@@ -123,6 +126,7 @@ export default function FloorDetail() {
           </div>
           <p className="text-muted-foreground text-sm mt-0.5">{spaces.length} espacios · {points.length} puntos</p>
         </div>
+        <Button onClick={exportPdf} size="sm" variant="outline"><Download className="w-4 h-4 mr-1.5" /> Exportar PDF</Button>
         <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
         <Button onClick={() => setPointDialog(true)} size="sm"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
       </div>
