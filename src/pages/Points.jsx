@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { usePoints, useFloors, useSpaces, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,15 +15,21 @@ import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress } from "@/lib/pointProgress";
 
 export default function Points() {
-  const { data: points = [], isLoading: loadingPoints } = usePoints();
-  const { data: floors = [], isLoading: loadingFloors } = useFloors();
-  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
-  const loading = loadingPoints || loadingFloors || loadingSpaces;
+  const pointsQ = usePoints();
+  const floorsQ = useFloors();
+  const spacesQ = useSpaces();
+  const points = pointsQ.data ?? [];
+  const floors = floorsQ.data ?? [];
+  const spaces = spacesQ.data ?? [];
+  const loading = pointsQ.isLoading || floorsQ.isLoading || spacesQ.isLoading;
+  const isError = pointsQ.isError || floorsQ.isError || spacesQ.isError;
   const invalidate = useInvalidateData();
+  const run = useAction();
   const [search, setSearch] = useState("");
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [filterTech, setFilterTech] = useState("all");
   const [editPoint, setEditPoint] = useState(null);
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
@@ -42,12 +50,12 @@ export default function Points() {
     return sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
   };
 
-  const saveEditPoint = async () => {
+  const saveEditPoint = () => run(async () => {
     if (!editPointName.trim()) return;
     await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
     setEditPoint(null);
     invalidate();
-  };
+  });
 
   const floorMap = useMemo(() => Object.fromEntries(floors.map((f) => [f.id, f.name])), [floors]);
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
@@ -58,6 +66,7 @@ export default function Points() {
       if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
       if (filterStatus !== "all" && p.status !== filterStatus) return false;
       if (filterType !== "all" && p.device_type !== filterType) return false;
+      if (filterTech !== "all" && p.technician !== filterTech) return false;
       return true;
     });
     if (!sortKey) return result;
@@ -77,10 +86,16 @@ export default function Points() {
       if (va > vb) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
-  }, [points, search, filterFloor, filterStatus, filterType, sortKey, sortDir, floorMap, spaceMap]);
+  }, [points, search, filterFloor, filterStatus, filterType, filterTech, sortKey, sortDir, floorMap, spaceMap]);
+
+  const technicians = useMemo(() => [...new Set(points.map((p) => p.technician).filter(Boolean))], [points]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (isError) {
+    return <DataError onRetry={invalidate} />;
   }
 
   return (
@@ -121,6 +136,15 @@ export default function Points() {
             <SelectItem value="access_point">AP WiFi</SelectItem>
           </SelectContent>
         </Select>
+        {technicians.length > 0 && (
+          <Select value={filterTech} onValueChange={setFilterTech}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Técnico" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {technicians.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-border overflow-hidden">

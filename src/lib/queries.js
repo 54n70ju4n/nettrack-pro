@@ -29,6 +29,14 @@ export function usePoints() {
   return useQuery({ queryKey: qk.points, queryFn: () => base44.entities.InstallationPoint.list("-created_date", 500) });
 }
 
+export function useTechnicians() {
+  return useQuery({ queryKey: ["technicians"], queryFn: () => base44.entities.Technician.list("-created_date", 200) });
+}
+
+export function useUsers() {
+  return useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list() });
+}
+
 export function useTemplates() {
   return useQuery({
     queryKey: qk.templates,
@@ -74,7 +82,7 @@ export function usePointsByFloor(floorId) {
 export function useInvalidateData() {
   const qc = useQueryClient();
   return () => {
-    for (const key of [["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"]]) {
+    for (const key of [["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"], ["technicians"], ["users"]]) {
       qc.invalidateQueries({ queryKey: key });
     }
   };

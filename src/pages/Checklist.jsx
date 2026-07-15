@@ -12,16 +12,20 @@ import DeviceIcon from "@/components/shared/DeviceIcon";
 import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
-import { usePoint, useFloor, useSpace, useInvalidateData } from "@/lib/queries";
+import { usePoint, useFloor, useSpace, useTechnicians, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import DataError from "@/components/shared/DataError";
 
 export default function Checklist() {
   const { pointId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const invalidate = useInvalidateData();
-  const { data: point, isLoading } = usePoint(pointId);
+  const run = useAction();
+  const { data: point, isLoading, isError } = usePoint(pointId);
   const { data: floor } = useFloor(point?.floor_id);
   const { data: space } = useSpace(point?.space_id);
+  const { data: technicians = [] } = useTechnicians();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(null);
 
@@ -31,24 +35,33 @@ export default function Checklist() {
 
   const save = async () => {
     setSaving(true);
-    const { id, created_date, updated_date, created_by_id, ...data } = form;
-    await base44.entities.InstallationPoint.update(pointId, data);
-    invalidate();
-    toast({ title: "Guardado", description: "Los cambios se guardaron correctamente." });
+    const ok = await run(async () => {
+      const { id, created_date, updated_date, created_by_id, ...data } = form;
+      await base44.entities.InstallationPoint.update(pointId, data);
+      return true;
+    });
     setSaving(false);
-    navigate(-1);
+    if (ok) {
+      invalidate();
+      toast({ title: "Guardado", description: "Los cambios se guardaron correctamente." });
+      navigate(-1);
+    }
   };
 
-  const uploadPhoto = async (e) => {
+  const uploadPhoto = (e) => run(async () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     update("evidencia", [...(form.evidencia || []), file_url]);
-  };
+  });
 
   const removePhoto = (url) => {
     update("evidencia", (form.evidencia || []).filter((u) => u !== url));
   };
+
+  if (isError) {
+    return <DataError onRetry={invalidate} />;
+  }
 
   if (isLoading || !form) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -94,6 +107,16 @@ export default function Checklist() {
               <DeviceIcon type={form.device_type} size="sm" />
               {tpl.label}
             </div>
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs mb-1.5 block">Técnico asignado</Label>
+            <Select value={form.technician || "none"} onValueChange={(v) => update("technician", v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {technicians.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </Section>

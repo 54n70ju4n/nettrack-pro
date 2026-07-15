@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2, HardHat, Phone } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useTechnicians, useInvalidateData } from "@/lib/queries";
+import DataError from "@/components/shared/DataError";
 
 const SPECIALTIES = {
   general: { label: "General", color: "bg-muted text-muted-foreground" },
@@ -15,24 +17,13 @@ const SPECIALTIES = {
 
 export default function TechniciansSection() {
   const { toast } = useToast();
-  const [techs, setTechs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const techsQ = useTechnicians();
+  const techs = techsQ.data ?? [];
+  const invalidate = useInvalidateData();
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [specialty, setSpecialty] = useState("general");
   const [phone, setPhone] = useState("");
-
-  const load = async () => {
-    try {
-      const list = await base44.entities.Technician.list("-created_date", 200);
-      setTechs(list);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los técnicos" });
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -48,7 +39,7 @@ export default function TechniciansSection() {
       setName("");
       setPhone("");
       setSpecialty("general");
-      load();
+      invalidate();
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: e.message || "No se pudo agregar el técnico" });
     }
@@ -58,15 +49,19 @@ export default function TechniciansSection() {
   const handleDelete = async (id) => {
     try {
       await base44.entities.Technician.delete(id);
-      setTechs(techs.filter((t) => t.id !== id));
       toast({ title: "Técnico eliminado" });
+      invalidate();
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar" });
     }
   };
 
-  if (loading) {
+  if (techsQ.isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (techsQ.isError) {
+    return <DataError onRetry={invalidate} message="No se pudieron cargar los técnicos." />;
   }
 
   return (

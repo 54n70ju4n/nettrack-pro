@@ -5,17 +5,27 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import { useEffect } from 'react';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { useEffect, lazy, Suspense } from 'react';
 import ScrollToTop from './components/ScrollToTop';
-import Dashboard from './pages/Dashboard';
-import Floors from './pages/Floors';
-import FloorDetail from './pages/FloorDetail';
-import Points from './pages/Points';
-import Checklist from './pages/Checklist';
-import Configuration from './pages/Configuration';
-import Templates from './pages/Templates';
 import AppLayout from './components/layout/AppLayout';
 import { loadTemplatesFromDB } from './lib/checklistTemplates';
+
+// Route-level code splitting: each page loads on demand instead of shipping
+// in the initial bundle.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Floors = lazy(() => import('./pages/Floors'));
+const FloorDetail = lazy(() => import('./pages/FloorDetail'));
+const Points = lazy(() => import('./pages/Points'));
+const Checklist = lazy(() => import('./pages/Checklist'));
+const Configuration = lazy(() => import('./pages/Configuration'));
+const Templates = lazy(() => import('./pages/Templates'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+  </div>
+);
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -45,18 +55,20 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/pisos" element={<Floors />} />
-        <Route path="/pisos/:floorId" element={<FloorDetail />} />
-        <Route path="/puntos" element={<Points />} />
-        <Route path="/checklist/:pointId" element={<Checklist />} />
-        <Route path="/configuracion" element={<Configuration />} />
-        <Route path="/plantillas" element={<Templates />} />
-      </Route>
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/pisos" element={<Floors />} />
+          <Route path="/pisos/:floorId" element={<FloorDetail />} />
+          <Route path="/puntos" element={<Points />} />
+          <Route path="/checklist/:pointId" element={<Checklist />} />
+          <Route path="/configuracion" element={<Configuration />} />
+          <Route path="/plantillas" element={<Templates />} />
+        </Route>
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
@@ -64,15 +76,17 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

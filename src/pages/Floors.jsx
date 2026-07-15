@@ -8,16 +8,24 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { getPointProgress } from "@/lib/pointProgress";
 import { useFloors, useSpaces, usePoints, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import { exportProjectPdf } from "@/lib/exportFloorPdf";
+import DataError from "@/components/shared/DataError";
 
 export default function Floors() {
-  const { data: floors = [], isLoading: loadingFloors } = useFloors();
-  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
-  const { data: points = [], isLoading: loadingPoints } = usePoints();
-  const loading = loadingFloors || loadingSpaces || loadingPoints;
+  const floorsQ = useFloors();
+  const spacesQ = useSpaces();
+  const pointsQ = usePoints();
+  const floors = floorsQ.data ?? [];
+  const spaces = spacesQ.data ?? [];
+  const points = pointsQ.data ?? [];
+  const loading = floorsQ.isLoading || spacesQ.isLoading || pointsQ.isLoading;
+  const isError = floorsQ.isError || spacesQ.isError || pointsQ.isError;
   const invalidate = useInvalidateData();
+  const run = useAction();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [floorName, setFloorName] = useState("");
@@ -25,15 +33,15 @@ export default function Floors() {
   const [editName, setEditName] = useState("");
   const [floorToDelete, setFloorToDelete] = useState(null);
 
-  const saveEditFloor = async () => {
+  const saveEditFloor = () => run(async () => {
     if (!editName.trim()) return;
     await base44.entities.Floor.update(editFloor.id, { name: editName.trim() });
     setEditFloor(null);
     setEditName("");
     invalidate();
-  };
+  });
 
-  const moveFloor = async (index, direction) => {
+  const moveFloor = (index, direction) => run(async () => {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= floors.length) return;
     const updates = [];
@@ -41,17 +49,17 @@ export default function Floors() {
     updates.push(base44.entities.Floor.update(floors[newIndex].id, { order: floors[index].order }));
     await Promise.all(updates);
     invalidate();
-  };
+  });
 
-  const addFloor = async () => {
+  const addFloor = () => run(async () => {
     if (!floorName.trim()) return;
     await base44.entities.Floor.create({ name: floorName.trim(), order: floors.length });
     setFloorName("");
     setDialogOpen(false);
     invalidate();
-  };
+  });
 
-  const confirmDeleteFloor = async () => {
+  const confirmDeleteFloor = () => run(async () => {
     const id = floorToDelete.id;
     const floorSpaces = spaces.filter((s) => s.floor_id === id);
     for (const s of floorSpaces) {
@@ -61,10 +69,14 @@ export default function Floors() {
     await base44.entities.Floor.delete(id);
     setFloorToDelete(null);
     invalidate();
-  };
+  });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (isError) {
+    return <DataError onRetry={invalidate} />;
   }
 
   return (
@@ -74,9 +86,16 @@ export default function Floors() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Pisos</h1>
           <p className="text-muted-foreground text-sm mt-1">Estructura del edificio</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="sm">
-          <Plus className="w-4 h-4 mr-1.5" /> Agregar piso
-        </Button>
+        <div className="flex items-center gap-2">
+          {floors.length > 0 && (
+            <Button onClick={() => run(async () => exportProjectPdf(floors, spaces, points))} size="sm" variant="outline">
+              <Download className="w-4 h-4 mr-1.5" /> Exportar proyecto
+            </Button>
+          )}
+          <Button onClick={() => setDialogOpen(true)} size="sm">
+            <Plus className="w-4 h-4 mr-1.5" /> Agregar piso
+          </Button>
+        </div>
       </div>
 
       {floors.length === 0 ? (

@@ -23,12 +23,11 @@ const STATUS_COLORS = {
   pendiente: [100, 116, 139],
 };
 
-export function exportFloorPdf(floor, spaces, points) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 40;
-  let y = 0;
+// Renders one floor (title + spaces + points) starting at ctx.y and returns the
+// ending y. Shared by the per-floor and whole-project exports.
+function renderFloor(doc, floor, spaces, points, ctx) {
+  const { pageW, pageH, margin } = ctx;
+  let y = ctx.y;
 
   const ensureSpace = (h) => {
     if (y + h > pageH - margin) {
@@ -36,15 +35,6 @@ export function exportFloorPdf(floor, spaces, points) {
       y = margin;
     }
   };
-
-  // Header
-  doc.setFillColor(29, 78, 216);
-  doc.rect(0, 0, pageW, 60, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("NetTrack Pro — Reporte de Piso", margin, 38);
-  y = 80;
 
   // Floor title
   doc.setTextColor(30, 41, 59);
@@ -193,5 +183,47 @@ export function exportFloorPdf(floor, spaces, points) {
     y += 6;
   }
 
+  ctx.y = y;
+  return y;
+}
+
+function drawHeader(doc, title, pageW, margin) {
+  doc.setFillColor(29, 78, 216);
+  doc.rect(0, 0, pageW, 60, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text(title, margin, 38);
+}
+
+export function exportFloorPdf(floor, spaces, points) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  drawHeader(doc, "NetTrack Pro — Reporte de Piso", pageW, margin);
+  renderFloor(doc, floor, spaces, points, { pageW, pageH, margin, y: 80 });
   doc.save(`piso-${(floor?.name || "piso").replace(/\s+/g, "-")}.pdf`);
+}
+
+export function exportProjectPdf(floors, spaces, points) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  drawHeader(doc, "NetTrack Pro — Reporte de Proyecto", pageW, margin);
+
+  const orderedFloors = [...floors].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  let y = 80;
+  orderedFloors.forEach((floor, idx) => {
+    if (idx > 0) {
+      doc.addPage();
+      y = margin;
+    }
+    const floorSpaces = spaces.filter((s) => s.floor_id === floor.id);
+    const floorPoints = points.filter((p) => p.floor_id === floor.id);
+    y = renderFloor(doc, floor, floorSpaces, floorPoints, { pageW, pageH, margin, y });
+  });
+
+  doc.save(`proyecto-nettrack-${new Date().toISOString().slice(0, 10)}.pdf`);
 }

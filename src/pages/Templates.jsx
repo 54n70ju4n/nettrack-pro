@@ -6,18 +6,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Loader2, ClipboardList, Save, Wifi, Camera, Cable, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ALL_FIELDS, FIELD_LABELS, DEFAULT_TEMPLATES } from "@/lib/checklistTemplates";
 import { useTemplates, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import DataError from "@/components/shared/DataError";
 
 const DEVICE_ICONS = { ethernet: Cable, camara: Camera, access_point: Wifi };
 const DEVICE_LABELS = { ethernet: "Ethernet", camara: "Cámara CCTV", access_point: "Access Point" };
 
 export default function Templates() {
   const { toast } = useToast();
-  const { data: templates = [], isLoading: loading } = useTemplates();
+  const { data: templates = [], isLoading: loading, isError } = useTemplates();
   const invalidate = useInvalidateData();
+  const run = useAction();
   const [saving, setSaving] = useState(false);
   const [editTpl, setEditTpl] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -52,23 +59,28 @@ export default function Templates() {
 
   const saveTemplate = async () => {
     setSaving(true);
-    const { id, created_date, updated_date, created_by_id, ...data } = editTpl;
-    await base44.entities.ChecklistTemplate.update(editTpl.id, data);
-    toast({ title: "Plantilla guardada", description: "Los cambios se aplicaron correctamente." });
+    const ok = await run(async () => {
+      const { id, created_date, updated_date, created_by_id, ...data } = editTpl;
+      await base44.entities.ChecklistTemplate.update(editTpl.id, data);
+      return true;
+    });
     setSaving(false);
-    setEditTpl(null);
-    invalidate();
+    if (ok) {
+      toast({ title: "Plantilla guardada", description: "Los cambios se aplicaron correctamente." });
+      setEditTpl(null);
+      invalidate();
+    }
   };
 
-  const deleteTemplate = async () => {
+  const deleteTemplate = () => run(async () => {
     if (!deleteTarget) return;
     await base44.entities.ChecklistTemplate.delete(deleteTarget.id);
     toast({ title: "Plantilla eliminada" });
     setDeleteTarget(null);
     invalidate();
-  };
+  });
 
-  const createTemplate = async () => {
+  const createTemplate = () => run(async () => {
     if (!newName.trim()) return;
     const defaults = DEFAULT_TEMPLATES[newType];
     await base44.entities.ChecklistTemplate.create({
@@ -85,29 +97,38 @@ export default function Templates() {
     setCreateOpen(false);
     setNewName("");
     invalidate();
-  };
+  });
 
   const seedDefaults = async () => {
     setSaving(true);
-    for (const [type, tpl] of Object.entries(DEFAULT_TEMPLATES)) {
-      await base44.entities.ChecklistTemplate.create({
-        name: tpl.label,
-        device_type: type,
-        activities: tpl.activities,
-        accessories: tpl.accessories,
-        equipment: tpl.equipment,
-        show_ponchado_type: tpl.showPonchadoType,
-        show_network: tpl.showNetwork,
-        custom_checks: [],
-      });
-    }
-    toast({ title: "Plantillas por defecto creadas" });
+    const ok = await run(async () => {
+      for (const [type, tpl] of Object.entries(DEFAULT_TEMPLATES)) {
+        await base44.entities.ChecklistTemplate.create({
+          name: tpl.label,
+          device_type: type,
+          activities: tpl.activities,
+          accessories: tpl.accessories,
+          equipment: tpl.equipment,
+          show_ponchado_type: tpl.showPonchadoType,
+          show_network: tpl.showNetwork,
+          custom_checks: [],
+        });
+      }
+      return true;
+    });
     setSaving(false);
-    invalidate();
+    if (ok) {
+      toast({ title: "Plantillas por defecto creadas" });
+      invalidate();
+    }
   };
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (isError) {
+    return <DataError onRetry={invalidate} />;
   }
 
   return (
@@ -264,18 +285,20 @@ export default function Templates() {
         </DialogContent>
       </Dialog>
       {/* Delete confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Eliminar plantilla</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">¿Seguro que deseas eliminar "{deleteTarget?.name}"? Esta acción no se puede deshacer.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={deleteTemplate}>
-              <Trash2 className="w-4 h-4 mr-2" /> Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar plantilla?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{deleteTarget?.name}&rdquo;. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteTemplate} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

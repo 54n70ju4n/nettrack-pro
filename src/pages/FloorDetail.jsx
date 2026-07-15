@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, Link } from "react-router-dom";
 import { useFloor, useSpacesByFloor, usePointsByFloor, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import DataError from "@/components/shared/DataError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,11 +21,16 @@ import { exportFloorPdf } from "@/lib/exportFloorPdf";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
-  const { data: floor, isLoading: loadingFloor } = useFloor(floorId);
-  const { data: spaces = [], isLoading: loadingSpaces } = useSpacesByFloor(floorId);
-  const { data: points = [], isLoading: loadingPoints } = usePointsByFloor(floorId);
-  const loading = loadingFloor || loadingSpaces || loadingPoints;
+  const floorQ = useFloor(floorId);
+  const spacesQ = useSpacesByFloor(floorId);
+  const pointsQ = usePointsByFloor(floorId);
+  const floor = floorQ.data;
+  const spaces = spacesQ.data ?? [];
+  const points = pointsQ.data ?? [];
+  const loading = floorQ.isLoading || spacesQ.isLoading || pointsQ.isLoading;
+  const isError = floorQ.isError || spacesQ.isError || pointsQ.isError;
   const invalidate = useInvalidateData();
+  const run = useAction();
   const [spaceDialog, setSpaceDialog] = useState(false);
   const [pointDialog, setPointDialog] = useState(false);
   const [spaceName, setSpaceName] = useState("");
@@ -43,26 +50,26 @@ export default function FloorDetail() {
 
   const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
 
-  const saveFloorName = async () => {
+  const saveFloorName = () => run(async () => {
     if (!floorEditVal.trim()) return;
     await base44.entities.Floor.update(floorId, { name: floorEditVal.trim() });
     setEditFloorName(false);
     invalidate();
-  };
+  });
 
-  const saveEditSpace = async () => {
+  const saveEditSpace = () => run(async () => {
     if (!editSpaceName.trim()) return;
     await base44.entities.Space.update(editSpace.id, { name: editSpaceName.trim(), space_type: editSpaceType });
     setEditSpace(null);
     invalidate();
-  };
+  });
 
-  const saveEditPoint = async () => {
+  const saveEditPoint = () => run(async () => {
     if (!editPointName.trim()) return;
     await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
     setEditPoint(null);
     invalidate();
-  };
+  });
 
   const sortedSpaces = useMemo(() => {
     const typeOrder = { habitacion: 0, sala: 1, pasillo: 2, otro: 99 };
@@ -73,15 +80,15 @@ export default function FloorDetail() {
     });
   }, [spaces]);
 
-  const addSpace = async () => {
+  const addSpace = () => run(async () => {
     if (!spaceName.trim()) return;
     await base44.entities.Space.create({ name: spaceName.trim(), floor_id: floorId, space_type: spaceType });
     setSpaceName("");
     setSpaceDialog(false);
     invalidate();
-  };
+  });
 
-  const addPoint = async () => {
+  const addPoint = () => run(async () => {
     if (!pointName.trim() || !selectedSpace) return;
     await base44.entities.InstallationPoint.create({
       name: pointName.trim(), floor_id: floorId, space_id: selectedSpace, device_type: deviceType,
@@ -89,18 +96,22 @@ export default function FloorDetail() {
     setPointName("");
     setPointDialog(false);
     invalidate();
-  };
+  });
 
-  const confirmDeleteSpace = async () => {
+  const confirmDeleteSpace = () => run(async () => {
     const id = spaceToDelete.id;
     await base44.entities.InstallationPoint.deleteMany({ space_id: id });
     await base44.entities.Space.delete(id);
     setSpaceToDelete(null);
     invalidate();
-  };
+  });
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (isError) {
+    return <DataError onRetry={invalidate} />;
   }
 
   return (

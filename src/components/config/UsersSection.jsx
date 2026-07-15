@@ -1,30 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, UserPlus, Mail, Shield, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useUsers, useInvalidateData } from "@/lib/queries";
+import DataError from "@/components/shared/DataError";
 
 export default function UsersSection() {
   const { toast } = useToast();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const usersQ = useUsers();
+  const users = usersQ.data ?? [];
+  const invalidate = useInvalidateData();
   const [inviting, setInviting] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("user");
-
-  const load = async () => {
-    try {
-      const list = await base44.entities.User.list();
-      setUsers(list);
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los usuarios" });
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
 
   const handleInvite = async () => {
     if (!email.trim()) return;
@@ -33,15 +24,19 @@ export default function UsersSection() {
       await base44.users.inviteUser(email.trim(), role);
       toast({ title: "Invitación enviada", description: `Se invitó a ${email.trim()} como ${role === "admin" ? "administrador" : "usuario"}` });
       setEmail("");
-      load();
+      invalidate();
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: e.message || "No se pudo enviar la invitación" });
     }
     setInviting(false);
   };
 
-  if (loading) {
+  if (usersQ.isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (usersQ.isError) {
+    return <DataError onRetry={invalidate} message="No se pudieron cargar los usuarios." />;
   }
 
   return (
