@@ -75,6 +75,28 @@ export const DEFAULT_CONFIG = {
   },
 };
 
+// Numeric config keys, used to coerce values that inputs may leave as "".
+const NUMERIC_KEYS = [
+  "customW", "customH", "marginTop", "marginRight", "marginBottom", "marginLeft",
+  "columns", "rows", "gapX", "gapY", "copies", "borderWidth", "cornerRadius",
+  "padding", "nameFontSize", "metaFontSize",
+];
+
+// Merges a partial/stored config onto the defaults and coerces numeric fields,
+// so a loaded template or an in-progress edit is always safe to render/export.
+export function sanitizeConfig(input = {}) {
+  const merged = {
+    ...DEFAULT_CONFIG,
+    ...input,
+    fields: { ...DEFAULT_CONFIG.fields, ...(input.fields || {}) },
+  };
+  for (const key of NUMERIC_KEYS) {
+    const n = Number(merged[key]);
+    merged[key] = Number.isFinite(n) ? n : DEFAULT_CONFIG[key];
+  }
+  return merged;
+}
+
 // Returns the effective page dimensions (mm) taking orientation into account.
 export function getPageSize(config) {
   const preset = SHEET_PRESETS[config.sheet] || SHEET_PRESETS.a4;

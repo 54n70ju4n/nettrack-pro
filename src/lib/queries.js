@@ -37,6 +37,10 @@ export function useUsers() {
   return useQuery({ queryKey: ["users"], queryFn: () => base44.entities.User.list() });
 }
 
+export function useLabelTemplates() {
+  return useQuery({ queryKey: ["labelTemplates"], queryFn: () => base44.entities.LabelTemplate.list("-created_date", 100) });
+}
+
 export function useTemplates() {
   return useQuery({
     queryKey: qk.templates,
@@ -82,7 +86,7 @@ export function usePointsByFloor(floorId) {
 export function useInvalidateData() {
   const qc = useQueryClient();
   return () => {
-    for (const key of [["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"], ["technicians"], ["users"]]) {
+    for (const key of [["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"], ["labelTemplates"], ["technicians"], ["users"]]) {
       qc.invalidateQueries({ queryKey: key });
     }
   };

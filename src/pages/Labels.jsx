@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { usePoints, useFloors, useSpaces, useInvalidateData } from "@/lib/queries";
+import { base44 } from "@/api/base44Client";
+import { usePoints, useFloors, useSpaces, useLabelTemplates, useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import { useToast } from "@/components/ui/use-toast";
 import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -7,7 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, Search, Printer, Download, Tag, RotateCcw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Search, Printer, Download, Tag, RotateCcw, Save, Pencil, Trash2, Check, BookMarked } from "lucide-react";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import {
   DEFAULT_CONFIG,
@@ -16,6 +24,7 @@ import {
   computeLayout,
   buildLabelLines,
   expandPoints,
+  sanitizeConfig,
 } from "@/lib/labelLayout";
 import { downloadLabelsPdf, printLabelsPdf } from "@/lib/exportLabelsPdf";
 
@@ -149,20 +158,98 @@ export default function Labels() {
   const pointsQ = usePoints();
   const floorsQ = useFloors();
   const spacesQ = useSpaces();
+  const labelTemplatesQ = useLabelTemplates();
   const points = pointsQ.data ?? [];
   const floors = floorsQ.data ?? [];
   const spaces = spacesQ.data ?? [];
+  const labelTemplates = labelTemplatesQ.data ?? [];
   const loading = pointsQ.isLoading || floorsQ.isLoading || spacesQ.isLoading;
   const isError = pointsQ.isError || floorsQ.isError || spacesQ.isError;
   const invalidate = useInvalidateData();
+  const run = useAction();
+  const { toast } = useToast();
 
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [selected, setSelected] = useState(() => new Set());
   const [search, setSearch] = useState("");
   const [filterFloor, setFilterFloor] = useState("all");
 
+  // Label-template management
+  const [activeTemplateId, setActiveTemplateId] = useState(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [renameTarget, setRenameTarget] = useState(null); // { id, name }
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
+
   const set = (patch) => setConfig((c) => ({ ...c, ...patch }));
   const setField = (key, val) => setConfig((c) => ({ ...c, fields: { ...c.fields, [key]: val } }));
+
+  const activeTemplate = useMemo(
+    () => labelTemplates.find((t) => t.id === activeTemplateId) || null,
+    [labelTemplates, activeTemplateId]
+  );
+
+  const applyTemplate = (tpl) => {
+    setConfig(sanitizeConfig(tpl.config));
+    setActiveTemplateId(tpl.id);
+    toast({ title: "Plantilla aplicada", description: tpl.name });
+  };
+
+  const openSave = () => {
+    setSaveName(activeTemplate?.name || "");
+    setSaveOpen(true);
+  };
+
+  const createTemplate = async () => {
+    if (!saveName.trim()) return;
+    setSaving(true);
+    const created = await run(async () =>
+      base44.entities.LabelTemplate.create({ name: saveName.trim(), config: sanitizeConfig(config) })
+    );
+    setSaving(false);
+    if (created) {
+      setActiveTemplateId(created.id);
+      setSaveOpen(false);
+      toast({ title: "Plantilla guardada", description: saveName.trim() });
+      invalidate();
+    }
+  };
+
+  const updateActiveTemplate = async () => {
+    if (!activeTemplate) return;
+    setSaving(true);
+    const ok = await run(async () => {
+      await base44.entities.LabelTemplate.update(activeTemplate.id, {
+        name: saveName.trim() || activeTemplate.name,
+        config: sanitizeConfig(config),
+      });
+      return true;
+    });
+    setSaving(false);
+    if (ok) {
+      setSaveOpen(false);
+      toast({ title: "Plantilla actualizada", description: saveName.trim() || activeTemplate.name });
+      invalidate();
+    }
+  };
+
+  const renameTemplate = () => run(async () => {
+    if (!renameTarget?.name.trim()) return;
+    await base44.entities.LabelTemplate.update(renameTarget.id, { name: renameTarget.name.trim() });
+    setRenameTarget(null);
+    toast({ title: "Plantilla renombrada" });
+    invalidate();
+  });
+
+  const deleteTemplate = () => run(async () => {
+    if (!deleteTarget) return;
+    await base44.entities.LabelTemplate.delete(deleteTarget.id);
+    if (activeTemplateId === deleteTarget.id) setActiveTemplateId(null);
+    setDeleteTarget(null);
+    toast({ title: "Plantilla eliminada" });
+    invalidate();
+  });
 
   const floorMap = useMemo(() => Object.fromEntries(floors.map((f) => [f.id, f.name])), [floors]);
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
@@ -229,6 +316,58 @@ export default function Labels() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
         {/* Left: selection + customization */}
         <div className="space-y-6">
+          {/* Label templates */}
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-sm flex items-center gap-2">
+                <BookMarked className="w-4 h-4 text-primary" /> Plantillas de rótulos
+              </h2>
+              <Button onClick={openSave} size="sm" variant="outline">
+                <Save className="w-4 h-4 mr-1.5" /> Guardar configuración
+              </Button>
+            </div>
+            {labelTemplatesQ.isLoading ? (
+              <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
+            ) : labelTemplates.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">
+                Aún no hay plantillas. Ajusta la configuración y pulsa «Guardar configuración» para reutilizarla después.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {labelTemplates.map((tpl) => {
+                  const active = tpl.id === activeTemplateId;
+                  return (
+                    <div
+                      key={tpl.id}
+                      className={`flex items-center gap-1 rounded-lg border pl-3 pr-1 py-1 text-sm transition-colors ${
+                        active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <button onClick={() => applyTemplate(tpl)} className="flex items-center gap-1.5 font-medium">
+                        {active && <Check className="w-3.5 h-3.5 text-primary" />}
+                        {tpl.name}
+                      </button>
+                      <button
+                        onClick={() => setRenameTarget({ id: tpl.id, name: tpl.name })}
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                        title="Renombrar"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(tpl)}
+                        className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Point selection */}
           <div className="bg-white rounded-xl border border-border">
             <div className="px-4 py-3 border-b border-border flex flex-wrap items-center gap-3">
@@ -409,6 +548,83 @@ export default function Labels() {
           </div>
         </div>
       </div>
+
+      {/* Save / update template dialog */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{activeTemplate ? "Guardar plantilla" : "Nueva plantilla"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs mb-1.5 block">Nombre</Label>
+              <Input
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !activeTemplate) createTemplate(); }}
+                placeholder="Ej: Etiquetas Avery 70×37"
+                autoFocus
+              />
+            </div>
+            {activeTemplate && (
+              <p className="text-xs text-muted-foreground">
+                Plantilla activa: «{activeTemplate.name}». Puedes actualizarla o guardar una copia nueva.
+              </p>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            {activeTemplate ? (
+              <>
+                <Button variant="outline" onClick={createTemplate} disabled={saving || !saveName.trim()}>
+                  Guardar como nueva
+                </Button>
+                <Button onClick={updateActiveTemplate} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Actualizar
+                </Button>
+              </>
+            ) : (
+              <Button onClick={createTemplate} disabled={saving || !saveName.trim()} className="w-full">
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Guardar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename dialog */}
+      <Dialog open={!!renameTarget} onOpenChange={(open) => { if (!open) setRenameTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Renombrar plantilla</DialogTitle></DialogHeader>
+          <Input
+            value={renameTarget?.name || ""}
+            onChange={(e) => setRenameTarget((t) => ({ ...t, name: e.target.value }))}
+            onKeyDown={(e) => { if (e.key === "Enter") renameTemplate(); }}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)}>Cancelar</Button>
+            <Button onClick={renameTemplate} disabled={!renameTarget?.name.trim()}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar plantilla?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{deleteTarget?.name}&rdquo;. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteTemplate} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
