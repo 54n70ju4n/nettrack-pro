@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, HardHat, Building2 } from "lucide-react";
 import UsersSection from "@/components/config/UsersSection";

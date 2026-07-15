@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,30 +8,22 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Loader2, ClipboardList, Save, Wifi, Camera, Cable, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { ALL_FIELDS, FIELD_LABELS, DEFAULT_TEMPLATES, setCachedTemplates } from "@/lib/checklistTemplates";
+import { ALL_FIELDS, FIELD_LABELS, DEFAULT_TEMPLATES } from "@/lib/checklistTemplates";
+import { useTemplates, useInvalidateData } from "@/lib/queries";
 
 const DEVICE_ICONS = { ethernet: Cable, camara: Camera, access_point: Wifi };
 const DEVICE_LABELS = { ethernet: "Ethernet", camara: "Cámara CCTV", access_point: "Access Point" };
 
 export default function Templates() {
   const { toast } = useToast();
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: templates = [], isLoading: loading } = useTemplates();
+  const invalidate = useInvalidateData();
   const [saving, setSaving] = useState(false);
   const [editTpl, setEditTpl] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("ethernet");
-
-  const load = async () => {
-    const t = await base44.entities.ChecklistTemplate.list("-created_date", 50);
-    setTemplates(t);
-    setCachedTemplates(t);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
 
   const toggleField = (tpl, category, field) => {
     const current = tpl[category] || [];
@@ -65,7 +57,7 @@ export default function Templates() {
     toast({ title: "Plantilla guardada", description: "Los cambios se aplicaron correctamente." });
     setSaving(false);
     setEditTpl(null);
-    load();
+    invalidate();
   };
 
   const deleteTemplate = async () => {
@@ -73,7 +65,7 @@ export default function Templates() {
     await base44.entities.ChecklistTemplate.delete(deleteTarget.id);
     toast({ title: "Plantilla eliminada" });
     setDeleteTarget(null);
-    load();
+    invalidate();
   };
 
   const createTemplate = async () => {
@@ -92,7 +84,7 @@ export default function Templates() {
     toast({ title: "Plantilla creada" });
     setCreateOpen(false);
     setNewName("");
-    load();
+    invalidate();
   };
 
   const seedDefaults = async () => {
@@ -111,7 +103,7 @@ export default function Templates() {
     }
     toast({ title: "Plantillas por defecto creadas" });
     setSaving(false);
-    load();
+    invalidate();
   };
 
   if (loading) {

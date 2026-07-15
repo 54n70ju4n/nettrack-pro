@@ -1,28 +1,36 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 import { getPointProgress } from "@/lib/pointProgress";
+import { useFloors, useSpaces, usePoints, useInvalidateData } from "@/lib/queries";
 
 export default function Floors() {
-  const [floors, setFloors] = useState([]);
-  const [spaces, setSpaces] = useState([]);
-  const [points, setPoints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: floors = [], isLoading: loadingFloors } = useFloors();
+  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
+  const { data: points = [], isLoading: loadingPoints } = usePoints();
+  const loading = loadingFloors || loadingSpaces || loadingPoints;
+  const invalidate = useInvalidateData();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [floorName, setFloorName] = useState("");
   const [editFloor, setEditFloor] = useState(null);
   const [editName, setEditName] = useState("");
+  const [floorToDelete, setFloorToDelete] = useState(null);
 
   const saveEditFloor = async () => {
     if (!editName.trim()) return;
     await base44.entities.Floor.update(editFloor.id, { name: editName.trim() });
     setEditFloor(null);
     setEditName("");
-    load();
+    invalidate();
   };
 
   const moveFloor = async (index, direction) => {
@@ -32,41 +40,27 @@ export default function Floors() {
     updates.push(base44.entities.Floor.update(floors[index].id, { order: floors[newIndex].order }));
     updates.push(base44.entities.Floor.update(floors[newIndex].id, { order: floors[index].order }));
     await Promise.all(updates);
-    load();
+    invalidate();
   };
-
-  const load = () => {
-    Promise.all([
-      base44.entities.Floor.list("order", 100),
-      base44.entities.Space.list("-created_date", 500),
-      base44.entities.InstallationPoint.list("-created_date", 500),
-    ]).then(([f, s, p]) => {
-      setFloors(f);
-      setSpaces(s);
-      setPoints(p);
-      setLoading(false);
-    });
-  };
-
-  useEffect(() => { load(); }, []);
 
   const addFloor = async () => {
     if (!floorName.trim()) return;
     await base44.entities.Floor.create({ name: floorName.trim(), order: floors.length });
     setFloorName("");
     setDialogOpen(false);
-    load();
+    invalidate();
   };
 
-  const deleteFloor = async (id) => {
-    if (!confirm("¿Eliminar este piso y todos sus espacios y puntos?")) return;
+  const confirmDeleteFloor = async () => {
+    const id = floorToDelete.id;
     const floorSpaces = spaces.filter((s) => s.floor_id === id);
     for (const s of floorSpaces) {
       await base44.entities.InstallationPoint.deleteMany({ space_id: s.id });
       await base44.entities.Space.delete(s.id);
     }
     await base44.entities.Floor.delete(id);
-    load();
+    setFloorToDelete(null);
+    invalidate();
   };
 
   if (loading) {
@@ -149,7 +143,7 @@ export default function Floors() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteFloor(f.id); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFloorToDelete(f); }}
                       className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -182,6 +176,21 @@ export default function Floors() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!floorToDelete} onOpenChange={(open) => { if (!open) setFloorToDelete(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar piso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{floorToDelete?.name}&rdquo; junto con todos sus espacios y puntos. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteFloor} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

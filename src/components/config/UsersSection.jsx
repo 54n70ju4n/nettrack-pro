@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, UserPlus, Trash2, Mail, Shield, User } from "lucide-react";
+import { Loader2, UserPlus, Mail, Shield, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function UsersSection() {

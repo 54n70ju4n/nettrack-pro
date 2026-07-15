@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, Link } from "react-router-dom";
+import { useFloor, useSpacesByFloor, usePointsByFloor, useInvalidateData } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download } from "lucide-react";
@@ -14,10 +19,11 @@ import { exportFloorPdf } from "@/lib/exportFloorPdf";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
-  const [floor, setFloor] = useState(null);
-  const [spaces, setSpaces] = useState([]);
-  const [points, setPoints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: floor, isLoading: loadingFloor } = useFloor(floorId);
+  const { data: spaces = [], isLoading: loadingSpaces } = useSpacesByFloor(floorId);
+  const { data: points = [], isLoading: loadingPoints } = usePointsByFloor(floorId);
+  const loading = loadingFloor || loadingSpaces || loadingPoints;
+  const invalidate = useInvalidateData();
   const [spaceDialog, setSpaceDialog] = useState(false);
   const [pointDialog, setPointDialog] = useState(false);
   const [spaceName, setSpaceName] = useState("");
@@ -33,6 +39,7 @@ export default function FloorDetail() {
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
   const [editSpaceType, setEditSpaceType] = useState("habitacion");
+  const [spaceToDelete, setSpaceToDelete] = useState(null);
 
   const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
 
@@ -40,37 +47,22 @@ export default function FloorDetail() {
     if (!floorEditVal.trim()) return;
     await base44.entities.Floor.update(floorId, { name: floorEditVal.trim() });
     setEditFloorName(false);
-    load();
+    invalidate();
   };
 
   const saveEditSpace = async () => {
     if (!editSpaceName.trim()) return;
     await base44.entities.Space.update(editSpace.id, { name: editSpaceName.trim(), space_type: editSpaceType });
     setEditSpace(null);
-    load();
+    invalidate();
   };
 
   const saveEditPoint = async () => {
     if (!editPointName.trim()) return;
     await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
     setEditPoint(null);
-    load();
+    invalidate();
   };
-
-  const load = () => {
-    Promise.all([
-      base44.entities.Floor.get(floorId),
-      base44.entities.Space.filter({ floor_id: floorId }, "order", 500),
-      base44.entities.InstallationPoint.filter({ floor_id: floorId }, "order", 500),
-    ]).then(([f, s, p]) => {
-      setFloor(f);
-      setSpaces(s);
-      setPoints(p);
-      setLoading(false);
-    });
-  };
-
-  useEffect(() => { load(); }, [floorId]);
 
   const sortedSpaces = useMemo(() => {
     const typeOrder = { habitacion: 0, sala: 1, pasillo: 2, otro: 99 };
@@ -86,7 +78,7 @@ export default function FloorDetail() {
     await base44.entities.Space.create({ name: spaceName.trim(), floor_id: floorId, space_type: spaceType });
     setSpaceName("");
     setSpaceDialog(false);
-    load();
+    invalidate();
   };
 
   const addPoint = async () => {
@@ -96,14 +88,15 @@ export default function FloorDetail() {
     });
     setPointName("");
     setPointDialog(false);
-    load();
+    invalidate();
   };
 
-  const deleteSpace = async (id) => {
-    if (!confirm("¿Eliminar espacio y sus puntos?")) return;
+  const confirmDeleteSpace = async () => {
+    const id = spaceToDelete.id;
     await base44.entities.InstallationPoint.deleteMany({ space_id: id });
     await base44.entities.Space.delete(id);
-    load();
+    setSpaceToDelete(null);
+    invalidate();
   };
 
   if (loading) {
@@ -164,7 +157,7 @@ export default function FloorDetail() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => deleteSpace(s.id)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
+                    <button onClick={() => setSpaceToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -301,6 +294,22 @@ export default function FloorDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Space Confirmation */}
+      <AlertDialog open={!!spaceToDelete} onOpenChange={(open) => { if (!open) setSpaceToDelete(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar espacio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{spaceToDelete?.name}&rdquo; y todos sus puntos de instalación. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSpace} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

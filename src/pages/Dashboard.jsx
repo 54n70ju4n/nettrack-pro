@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { usePoints, useFloors, useSpaces } from "@/lib/queries";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
@@ -13,26 +13,13 @@ import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-reac
 const STATUS_COLORS = { pendiente: "#94a3b8", en_proceso: "#f59e0b", finalizado: "#22c55e", con_observaciones: "#ef4444" };
 
 export default function Dashboard() {
-  const [points, setPoints] = useState([]);
-  const [floors, setFloors] = useState([]);
-  const [spaces, setSpaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: points = [], isLoading: loadingPoints } = usePoints();
+  const { data: floors = [], isLoading: loadingFloors } = useFloors();
+  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
+  const loading = loadingPoints || loadingFloors || loadingSpaces;
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTech, setFilterTech] = useState("all");
-
-  useEffect(() => {
-    Promise.all([
-      base44.entities.InstallationPoint.list("-created_date", 500),
-      base44.entities.Floor.list("order", 100),
-      base44.entities.Space.list("-created_date", 500),
-    ]).then(([p, f, s]) => {
-      setPoints(p);
-      setFloors(f);
-      setSpaces(s);
-      setLoading(false);
-    });
-  }, []);
 
   const filtered = useMemo(() => {
     return points.filter((p) => {

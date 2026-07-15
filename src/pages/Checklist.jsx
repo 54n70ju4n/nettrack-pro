@@ -12,31 +12,20 @@ import DeviceIcon from "@/components/shared/DeviceIcon";
 import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
+import { usePoint, useFloor, useSpace, useInvalidateData } from "@/lib/queries";
 
 export default function Checklist() {
   const { pointId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [point, setPoint] = useState(null);
-  const [floor, setFloor] = useState(null);
-  const [space, setSpace] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const invalidate = useInvalidateData();
+  const { data: point, isLoading } = usePoint(pointId);
+  const { data: floor } = useFloor(point?.floor_id);
+  const { data: space } = useSpace(point?.space_id);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState(null);
 
-  useEffect(() => {
-    base44.entities.InstallationPoint.get(pointId).then(async (p) => {
-      setPoint(p);
-      setForm(p);
-      const [f, s] = await Promise.all([
-        base44.entities.Floor.get(p.floor_id),
-        base44.entities.Space.get(p.space_id),
-      ]);
-      setFloor(f);
-      setSpace(s);
-      setLoading(false);
-    });
-  }, [pointId]);
+  useEffect(() => { if (point) setForm(point); }, [point]);
 
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -44,6 +33,7 @@ export default function Checklist() {
     setSaving(true);
     const { id, created_date, updated_date, created_by_id, ...data } = form;
     await base44.entities.InstallationPoint.update(pointId, data);
+    invalidate();
     toast({ title: "Guardado", description: "Los cambios se guardaron correctamente." });
     setSaving(false);
     navigate(-1);
@@ -60,7 +50,7 @@ export default function Checklist() {
     update("evidencia", (form.evidencia || []).filter((u) => u !== url));
   };
 
-  if (loading) {
+  if (isLoading || !form) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 

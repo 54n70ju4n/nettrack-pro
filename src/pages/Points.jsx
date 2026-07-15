@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
+import { usePoints, useFloors, useSpaces, useInvalidateData } from "@/lib/queries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,10 +13,11 @@ import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress } from "@/lib/pointProgress";
 
 export default function Points() {
-  const [points, setPoints] = useState([]);
-  const [floors, setFloors] = useState([]);
-  const [spaces, setSpaces] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: points = [], isLoading: loadingPoints } = usePoints();
+  const { data: floors = [], isLoading: loadingFloors } = useFloors();
+  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
+  const loading = loadingPoints || loadingFloors || loadingSpaces;
+  const invalidate = useInvalidateData();
   const [search, setSearch] = useState("");
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -44,22 +46,8 @@ export default function Points() {
     if (!editPointName.trim()) return;
     await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
     setEditPoint(null);
-    const p = await base44.entities.InstallationPoint.list("-created_date", 500);
-    setPoints(p);
+    invalidate();
   };
-
-  useEffect(() => {
-    Promise.all([
-      base44.entities.InstallationPoint.list("-created_date", 500),
-      base44.entities.Floor.list("order", 100),
-      base44.entities.Space.list("-created_date", 500),
-    ]).then(([p, f, s]) => {
-      setPoints(p);
-      setFloors(f);
-      setSpaces(s);
-      setLoading(false);
-    });
-  }, []);
 
   const floorMap = useMemo(() => Object.fromEntries(floors.map((f) => [f.id, f.name])), [floors]);
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);

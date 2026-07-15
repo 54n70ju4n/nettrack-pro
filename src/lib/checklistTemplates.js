@@ -80,6 +80,7 @@ export async function loadTemplatesFromDB() {
     }
   } catch (e) {
     // fall back to static defaults
+    console.warn("No se pudieron cargar las plantillas desde la BD; usando defaults estáticos.", e);
   }
 }
 
