@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Wand2, AlertTriangle, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -40,8 +41,9 @@ export default function RenamePointsSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [applying, setApplying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [filterFloor, setFilterFloor] = useState("all");
 
-  const { rows, changes, warnings } = useMemo(() => {
+  const { rows, warnings } = useMemo(() => {
     const floorById = Object.fromEntries(floors.map((f) => [f.id, f]));
     const spaceById = Object.fromEntries(spaces.map((s) => [s.id, s]));
 
@@ -73,12 +75,18 @@ export default function RenamePointsSection() {
     }
 
     const rows = points
-      .map((p) => ({ id: p.id, old: p.name || "", neu: newNameById[p.id], valid: !!newNameById[p.id] }))
+      .map((p) => ({ id: p.id, floor_id: p.floor_id, old: p.name || "", neu: newNameById[p.id], valid: !!newNameById[p.id] }))
       .map((r) => ({ ...r, changed: r.valid && r.old !== r.neu }))
       .sort((a, b) => (a.neu || a.old || "").localeCompare(b.neu || b.old || "", undefined, { numeric: true }));
 
-    return { rows, changes: rows.filter((r) => r.changed), warnings: [...warn] };
+    return { rows, warnings: [...warn] };
   }, [points, floors, spaces]);
+
+  const visibleRows = useMemo(
+    () => (filterFloor === "all" ? rows : rows.filter((r) => r.floor_id === filterFloor)),
+    [rows, filterFloor]
+  );
+  const changes = visibleRows.filter((r) => r.changed);
 
   const apply = async () => {
     setApplying(true);
@@ -140,21 +148,30 @@ export default function RenamePointsSection() {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">{changes.length}</span> de {rows.length} puntos cambiarán de nombre.
-          </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Select value={filterFloor} onValueChange={setFilterFloor}>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Piso" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los pisos</SelectItem>
+                {floors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{changes.length}</span> de {visibleRows.length} puntos cambiarán de nombre.
+            </p>
+          </div>
           <Button size="sm" disabled={changes.length === 0} onClick={() => setConfirmOpen(true)}>
-            <Wand2 className="w-4 h-4 mr-2" /> Aplicar renombrado
+            <Wand2 className="w-4 h-4 mr-2" /> Aplicar {filterFloor === "all" ? "todo" : "este piso"}
           </Button>
         </div>
       </div>
 
-      {rows.length > 0 && (
+      {visibleRows.length > 0 && (
         <div className="bg-white rounded-xl border border-border p-5">
           <h3 className="font-heading font-semibold text-sm mb-3">Vista previa</h3>
           <div className="max-h-[420px] overflow-y-auto divide-y divide-border text-sm">
-            {rows.map((r) => (
+            {visibleRows.map((r) => (
               <div key={r.id} className={`flex items-center gap-3 py-2 ${r.changed ? "" : "opacity-50"}`}>
                 <span className="flex-1 min-w-0 truncate text-muted-foreground">{r.old || <em>(sin nombre)</em>}</span>
                 <ArrowRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
