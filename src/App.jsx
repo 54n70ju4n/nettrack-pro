@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Floors = lazy(() => import('./pages/Floors'));
 const FloorDetail = lazy(() => import('./pages/FloorDetail'));
 const Points = lazy(() => import('./pages/Points'));
+const Labels = lazy(() => import('./pages/Labels'));
 const Checklist = lazy(() => import('./pages/Checklist'));
 const Configuration = lazy(() => import('./pages/Configuration'));
 const Templates = lazy(() => import('./pages/Templates'));
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
           <Route path="/pisos" element={<Floors />} />
           <Route path="/pisos/:floorId" element={<FloorDetail />} />
           <Route path="/puntos" element={<Points />} />
+          <Route path="/rotulos" element={<Labels />} />
           <Route path="/checklist/:pointId" element={<Checklist />} />
           <Route path="/configuracion" element={<Configuration />} />
           <Route path="/plantillas" element={<Templates />} />
