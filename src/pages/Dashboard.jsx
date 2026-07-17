@@ -1,36 +1,80 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { usePoints, useFloors, useSpaces } from "@/lib/queries";
+import { usePoints, useFloors, useSpaces, useTemplates } from "@/lib/queries";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import { getPointProgress } from "@/lib/pointProgress";
+import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-react";
 
 const STATUS_COLORS = { pendiente: "#94a3b8", en_proceso: "#f59e0b", finalizado: "#22c55e", con_observaciones: "#ef4444" };
 
+// A point is "missing" a checklist item when the item applies to its device
+// template but hasn't been checked. Finalized points are considered complete.
+function isPointMissing(point, fieldKey) {
+  if (!fieldKey || point.status === "finalizado") return false;
+  const tpl = getTemplate(point.device_type);
+  if (fieldKey.startsWith("custom:")) {
+    const id = fieldKey.slice(7);
+    const applies = (tpl.customChecks || []).some((c) => c.id === id);
+    return applies && !point.custom_checks?.[id];
+  }
+  const applies = [...tpl.activities, ...tpl.accessories, ...tpl.equipment].includes(fieldKey);
+  return applies && !point[fieldKey];
+}
+
 export default function Dashboard() {
   const { data: points = [], isLoading: loadingPoints } = usePoints();
   const { data: floors = [], isLoading: loadingFloors } = useFloors();
   const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
+  const { data: templates = [] } = useTemplates();
   const loading = loadingPoints || loadingFloors || loadingSpaces;
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTech, setFilterTech] = useState("all");
+  const [filterDevice, setFilterDevice] = useState("all");
+  const [filterMissing, setFilterMissing] = useState("all");
 
   const filtered = useMemo(() => {
     return points.filter((p) => {
       if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
       if (filterStatus !== "all" && p.status !== filterStatus) return false;
       if (filterTech !== "all" && p.technician !== filterTech) return false;
+      if (filterDevice !== "all" && p.device_type !== filterDevice) return false;
+      if (filterMissing !== "all" && !isPointMissing(p, filterMissing)) return false;
       return true;
     });
-  }, [points, filterFloor, filterStatus, filterTech]);
+  }, [points, filterFloor, filterStatus, filterTech, filterDevice, filterMissing]);
 
   const technicians = useMemo(() => [...new Set(points.map((p) => p.technician).filter(Boolean))], [points]);
+
+  // Device types actually present in the data, labelled from their template.
+  const deviceTypes = useMemo(() => {
+    const present = [...new Set(points.map((p) => p.device_type).filter(Boolean))];
+    return present.map((t) => ({ value: t, label: getTemplate(t).label || t }));
+    // templates dep: re-label once DB templates load into the cache
+  }, [points, templates]);
+
+  // Union of checklist items across the templates in use, for the "falta por…" filter.
+  const missingOptions = useMemo(() => {
+    const seen = new Map();
+    const present = [...new Set(points.map((p) => p.device_type).filter(Boolean))];
+    for (const dt of present) {
+      const tpl = getTemplate(dt);
+      for (const f of [...tpl.activities, ...tpl.accessories, ...tpl.equipment]) {
+        if (!seen.has(f)) seen.set(f, FIELD_LABELS[f] || f);
+      }
+      for (const c of tpl.customChecks || []) {
+        const key = `custom:${c.id}`;
+        if (!seen.has(key)) seen.set(key, c.label || c.id);
+      }
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  }, [points, templates]);
   const floorMap = useMemo(() => Object.fromEntries(floors.map((f) => [f.id, f.name])), [floors]);
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
 
@@ -131,6 +175,20 @@ export default function Dashboard() {
           <SelectContent>
             <SelectItem value="all">Todos los técnicos</SelectItem>
             {technicians.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterDevice} onValueChange={setFilterDevice}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="Dispositivo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los dispositivos</SelectItem>
+            {deviceTypes.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterMissing} onValueChange={setFilterMissing}>
+          <SelectTrigger className="w-48"><SelectValue placeholder="Falta por…" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Cualquier pendiente</SelectItem>
+            {missingOptions.map((m) => <SelectItem key={m.value} value={m.value}>Falta: {m.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
