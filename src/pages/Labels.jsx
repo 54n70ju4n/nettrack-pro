@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { usePoints, useFloors, useSpaces, useLabelTemplates, useInvalidateData } from "@/lib/queries";
+import { usePoints, useFloors, useSpaces, useLabelTemplates, useTemplates, useInvalidateData } from "@/lib/queries";
+import { getTemplate } from "@/lib/checklistTemplates";
 import { useAction } from "@/lib/useAction";
 import { useToast } from "@/components/ui/use-toast";
 import DataError from "@/components/shared/DataError";
@@ -159,10 +160,12 @@ export default function Labels() {
   const floorsQ = useFloors();
   const spacesQ = useSpaces();
   const labelTemplatesQ = useLabelTemplates();
+  const templatesQ = useTemplates();
   const points = pointsQ.data ?? [];
   const floors = floorsQ.data ?? [];
   const spaces = spacesQ.data ?? [];
   const labelTemplates = labelTemplatesQ.data ?? [];
+  const templates = templatesQ.data ?? [];
   const loading = pointsQ.isLoading || floorsQ.isLoading || spacesQ.isLoading;
   const isError = pointsQ.isError || floorsQ.isError || spacesQ.isError;
   const invalidate = useInvalidateData();
@@ -173,6 +176,7 @@ export default function Labels() {
   const [selected, setSelected] = useState(() => new Set());
   const [search, setSearch] = useState("");
   const [filterFloor, setFilterFloor] = useState("all");
+  const [filterDevice, setFilterDevice] = useState("all");
 
   // Label-template management
   const [activeTemplateId, setActiveTemplateId] = useState(null);
@@ -255,14 +259,22 @@ export default function Labels() {
   const spaceMap = useMemo(() => Object.fromEntries(spaces.map((s) => [s.id, s.name])), [spaces]);
   const maps = useMemo(() => ({ floorMap, spaceMap }), [floorMap, spaceMap]);
 
+  // Device types actually present in the data, labelled from their template.
+  const deviceTypes = useMemo(() => {
+    const present = [...new Set(points.map((p) => p.device_type).filter(Boolean))];
+    return present.map((t) => ({ value: t, label: getTemplate(t).label || t }));
+    // templates dep: re-label once DB templates load into the cache
+  }, [points, templates]);
+
   const filtered = useMemo(
     () =>
       points.filter((p) => {
         if (search && !(p.name || "").toLowerCase().includes(search.toLowerCase())) return false;
         if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
+        if (filterDevice !== "all" && p.device_type !== filterDevice) return false;
         return true;
       }),
-    [points, search, filterFloor]
+    [points, search, filterFloor, filterDevice]
   );
 
   const selectedPoints = useMemo(() => points.filter((p) => selected.has(p.id)), [points, selected]);
@@ -380,6 +392,13 @@ export default function Labels() {
                 <SelectContent>
                   <SelectItem value="all">Todos los pisos</SelectItem>
                   {floors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterDevice} onValueChange={setFilterDevice}>
+                <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Dispositivo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los dispositivos</SelectItem>
+                  {deviceTypes.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
