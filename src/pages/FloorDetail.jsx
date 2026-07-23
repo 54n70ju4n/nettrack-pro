@@ -47,6 +47,7 @@ export default function FloorDetail() {
   const [editPointType, setEditPointType] = useState("ethernet");
   const [editSpaceType, setEditSpaceType] = useState("habitacion");
   const [spaceToDelete, setSpaceToDelete] = useState(null);
+  const [pointToDelete, setPointToDelete] = useState(null);
 
   const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
 
@@ -106,6 +107,12 @@ export default function FloorDetail() {
     invalidate();
   });
 
+  const confirmDeletePoint = () => run(async () => {
+    await base44.entities.InstallationPoint.delete(pointToDelete.id);
+    setPointToDelete(null);
+    invalidate();
+  });
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -116,23 +123,25 @@ export default function FloorDetail() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Link to="/pisos" className="p-2 rounded-lg hover:bg-muted"><ArrowLeft className="w-4 h-4" /></Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-heading font-bold tracking-tight">{floor?.name}</h1>
+            <h1 className="text-2xl font-heading font-bold tracking-tight truncate">{floor?.name}</h1>
             <button
               onClick={() => { setFloorEditVal(floor?.name || ""); setEditFloorName(true); }}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground flex-shrink-0"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
           </div>
           <p className="text-muted-foreground text-sm mt-0.5">{spaces.length} espacios · {points.length} puntos</p>
         </div>
-        <Button onClick={exportPdf} size="sm" variant="outline"><Download className="w-4 h-4 mr-1.5" /> Exportar PDF</Button>
-        <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
-        <Button onClick={() => setPointDialog(true)} size="sm"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={exportPdf} size="sm" variant="outline"><Download className="w-4 h-4 mr-1.5" /> Exportar PDF</Button>
+          <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
+          <Button onClick={() => setPointDialog(true)} size="sm"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
+        </div>
       </div>
 
       {spaces.length === 0 ? (
@@ -197,6 +206,12 @@ export default function FloorDetail() {
                           className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPointToDelete(pt); }}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <StatusBadge status={pt.status} />
                         <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -318,6 +333,22 @@ export default function FloorDetail() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteSpace} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Point Confirmation */}
+      <AlertDialog open={!!pointToDelete} onOpenChange={(open) => { if (!open) setPointToDelete(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar punto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{pointToDelete?.name}&rdquo; junto con su checklist. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePoint} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

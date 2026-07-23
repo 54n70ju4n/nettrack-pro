@@ -8,9 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { Loader2, Search, ChevronRight, Pencil, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { Loader2, Search, ChevronRight, Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress } from "@/lib/pointProgress";
 
@@ -33,6 +37,7 @@ export default function Points() {
   const [editPoint, setEditPoint] = useState(null);
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
+  const [pointToDelete, setPointToDelete] = useState(null);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
 
@@ -54,6 +59,12 @@ export default function Points() {
     if (!editPointName.trim()) return;
     await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
     setEditPoint(null);
+    invalidate();
+  });
+
+  const confirmDeletePoint = () => run(async () => {
+    await base44.entities.InstallationPoint.delete(pointToDelete.id);
+    setPointToDelete(null);
     invalidate();
   });
 
@@ -182,6 +193,12 @@ export default function Points() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPointToDelete(pt); }}
+                      className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
@@ -210,6 +227,21 @@ export default function Points() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pointToDelete} onOpenChange={(open) => { if (!open) setPointToDelete(null); }}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar punto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará &ldquo;{pointToDelete?.name}&rdquo; junto con su checklist. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePoint} className="bg-red-600 hover:bg-red-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

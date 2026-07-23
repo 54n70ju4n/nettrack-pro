@@ -81,7 +81,7 @@ export default function Floors() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold tracking-tight">Pisos</h1>
           <p className="text-muted-foreground text-sm mt-1">Estructura del edificio</p>
@@ -157,13 +157,13 @@ export default function Floors() {
                     </div>
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditFloor(f); setEditName(f.name); }}
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFloorToDelete(f); }}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
