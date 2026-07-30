@@ -6,6 +6,8 @@ import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -14,9 +16,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
+import PhaseChips from "@/components/shared/PhaseChips";
 import { Loader2, Search, ChevronRight, Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
-import { getPointProgress } from "@/lib/pointProgress";
+import { getPointProgress, getPointPhaseProgress } from "@/lib/pointProgress";
+import { parseOrder, formatOrder } from "@/lib/ordering";
 
 export default function Points() {
   const pointsQ = usePoints();
@@ -37,6 +41,8 @@ export default function Points() {
   const [editPoint, setEditPoint] = useState(null);
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
+  const [editPointDesc, setEditPointDesc] = useState("");
+  const [editPointOrder, setEditPointOrder] = useState("");
   const [pointToDelete, setPointToDelete] = useState(null);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -57,10 +63,21 @@ export default function Points() {
 
   const saveEditPoint = () => run(async () => {
     if (!editPointName.trim()) return;
-    await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
+    await base44.entities.InstallationPoint.update(editPoint.id, {
+      name: editPointName.trim(), device_type: editPointType,
+      description: editPointDesc.trim(), order: parseOrder(editPointOrder),
+    });
     setEditPoint(null);
     invalidate();
   });
+
+  const openEditPoint = (pt) => {
+    setEditPoint(pt);
+    setEditPointName(pt.name);
+    setEditPointType(pt.device_type);
+    setEditPointDesc(pt.description || "");
+    setEditPointOrder(formatOrder(pt.order));
+  };
 
   const confirmDeletePoint = () => run(async () => {
     await base44.entities.InstallationPoint.delete(pointToDelete.id);
@@ -173,12 +190,16 @@ export default function Points() {
           ) : (
             filtered.map((pt) => {
               const progress = getPointProgress(pt);
+              const phases = getPointPhaseProgress(pt);
               return (
               <Link key={pt.id} to={`/checklist/${pt.id}`} className="block px-4 py-3 hover:bg-muted/30 transition-colors">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-                  <div className="col-span-3 flex items-center gap-2.5">
+                  <div className="col-span-3 flex items-center gap-2.5 min-w-0">
                     <DeviceIcon type={pt.device_type} size="sm" />
-                    <span className="font-medium text-sm">{pt.name}</span>
+                    <div className="min-w-0">
+                      <span className="font-medium text-sm">{pt.name}</span>
+                      {pt.description && <p className="text-xs text-muted-foreground truncate">{pt.description}</p>}
+                    </div>
                   </div>
                   <div className="col-span-3 text-sm text-muted-foreground">{floorMap[pt.floor_id] || "—"}</div>
                   <div className="col-span-3 text-sm text-muted-foreground">{spaceMap[pt.space_id] || "—"}</div>
@@ -188,7 +209,7 @@ export default function Points() {
                   </div>
                   <div className="col-span-1 flex items-center justify-end gap-1">
                     <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditPoint(pt); }}
                       className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -203,6 +224,7 @@ export default function Points() {
                   </div>
                 </div>
                 <ProgressBar value={progress} className="mt-2" />
+                <PhaseChips phases={phases} className="mt-1.5" />
               </Link>
               );
             })
@@ -223,6 +245,14 @@ export default function Points() {
                 <SelectItem value="access_point">AP WiFi</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <Label className="text-xs mb-1.5 block">Descripción (opcional)</Label>
+              <Textarea placeholder="Ubicación, referencia, detalles..." value={editPointDesc} onChange={(e) => setEditPointDesc(e.target.value)} rows={2} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
+              <Input placeholder="Ej: 1 o 1.2" value={editPointOrder} onChange={(e) => setEditPointOrder(e.target.value)} inputMode="decimal" />
+            </div>
             <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
           </div>
         </DialogContent>

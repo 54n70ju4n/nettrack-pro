@@ -6,6 +6,8 @@ import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -14,9 +16,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download } from "lucide-react";
+import PhaseChips from "@/components/shared/PhaseChips";
+import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download, ArrowDownUp } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
-import { getPointProgress } from "@/lib/pointProgress";
+import { getPointProgress, getPointPhaseProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
+import { sortItems, parseOrder, formatOrder } from "@/lib/ordering";
 import { exportFloorPdf } from "@/lib/exportFloorPdf";
 
 export default function FloorDetail() {
@@ -35,19 +39,26 @@ export default function FloorDetail() {
   const [pointDialog, setPointDialog] = useState(false);
   const [spaceName, setSpaceName] = useState("");
   const [spaceType, setSpaceType] = useState("habitacion");
+  const [spaceOrder, setSpaceOrder] = useState("");
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [pointName, setPointName] = useState("");
+  const [pointDesc, setPointDesc] = useState("");
+  const [pointOrder, setPointOrder] = useState("");
   const [deviceType, setDeviceType] = useState("ethernet");
   const [editFloorName, setEditFloorName] = useState(false);
   const [floorEditVal, setFloorEditVal] = useState("");
   const [editSpace, setEditSpace] = useState(null);
   const [editSpaceName, setEditSpaceName] = useState("");
+  const [editSpaceOrder, setEditSpaceOrder] = useState("");
   const [editPoint, setEditPoint] = useState(null);
   const [editPointName, setEditPointName] = useState("");
   const [editPointType, setEditPointType] = useState("ethernet");
+  const [editPointDesc, setEditPointDesc] = useState("");
+  const [editPointOrder, setEditPointOrder] = useState("");
   const [editSpaceType, setEditSpaceType] = useState("habitacion");
   const [spaceToDelete, setSpaceToDelete] = useState(null);
   const [pointToDelete, setPointToDelete] = useState(null);
+  const [sortMode, setSortMode] = useState("manual");
 
   const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
 
@@ -60,31 +71,47 @@ export default function FloorDetail() {
 
   const saveEditSpace = () => run(async () => {
     if (!editSpaceName.trim()) return;
-    await base44.entities.Space.update(editSpace.id, { name: editSpaceName.trim(), space_type: editSpaceType });
+    await base44.entities.Space.update(editSpace.id, {
+      name: editSpaceName.trim(), space_type: editSpaceType, order: parseOrder(editSpaceOrder),
+    });
     setEditSpace(null);
     invalidate();
   });
 
   const saveEditPoint = () => run(async () => {
     if (!editPointName.trim()) return;
-    await base44.entities.InstallationPoint.update(editPoint.id, { name: editPointName.trim(), device_type: editPointType });
+    await base44.entities.InstallationPoint.update(editPoint.id, {
+      name: editPointName.trim(), device_type: editPointType,
+      description: editPointDesc.trim(), order: parseOrder(editPointOrder),
+    });
     setEditPoint(null);
     invalidate();
   });
 
-  const sortedSpaces = useMemo(() => {
-    const typeOrder = { habitacion: 0, sala: 1, pasillo: 2, otro: 99 };
-    return [...spaces].sort((a, b) => {
-      const typeDiff = (typeOrder[a.space_type] ?? 99) - (typeOrder[b.space_type] ?? 99);
-      if (typeDiff !== 0) return typeDiff;
-      return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' });
-    });
-  }, [spaces]);
+  const openEditSpace = (s) => {
+    setEditSpace(s);
+    setEditSpaceName(s.name);
+    setEditSpaceType(s.space_type || "habitacion");
+    setEditSpaceOrder(formatOrder(s.order));
+  };
+
+  const openEditPoint = (pt) => {
+    setEditPoint(pt);
+    setEditPointName(pt.name);
+    setEditPointType(pt.device_type);
+    setEditPointDesc(pt.description || "");
+    setEditPointOrder(formatOrder(pt.order));
+  };
+
+  const sortedSpaces = useMemo(() => sortItems(spaces, sortMode), [spaces, sortMode]);
 
   const addSpace = () => run(async () => {
     if (!spaceName.trim()) return;
-    await base44.entities.Space.create({ name: spaceName.trim(), floor_id: floorId, space_type: spaceType });
+    await base44.entities.Space.create({
+      name: spaceName.trim(), floor_id: floorId, space_type: spaceType, order: parseOrder(spaceOrder),
+    });
     setSpaceName("");
+    setSpaceOrder("");
     setSpaceDialog(false);
     invalidate();
   });
@@ -93,8 +120,11 @@ export default function FloorDetail() {
     if (!pointName.trim() || !selectedSpace) return;
     await base44.entities.InstallationPoint.create({
       name: pointName.trim(), floor_id: floorId, space_id: selectedSpace, device_type: deviceType,
+      description: pointDesc.trim(), order: parseOrder(pointOrder),
     });
     setPointName("");
+    setPointDesc("");
+    setPointOrder("");
     setPointDialog(false);
     invalidate();
   });
@@ -151,28 +181,51 @@ export default function FloorDetail() {
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedSpaces.map((s, spaceIdx) => {
-            const spacePoints = points
-              .filter((p) => p.space_id === s.id)
-              .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: 'base' }));
+          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+            <ArrowDownUp className="w-3.5 h-3.5" />
+            <span>Ordenar:</span>
+            <div className="inline-flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setSortMode("manual")}
+                className={`px-2.5 py-1 font-medium transition-colors ${sortMode === "manual" ? "bg-primary text-white" : "hover:bg-muted"}`}
+              >
+                Manual
+              </button>
+              <button
+                onClick={() => setSortMode("name")}
+                className={`px-2.5 py-1 font-medium transition-colors ${sortMode === "name" ? "bg-primary text-white" : "hover:bg-muted"}`}
+              >
+                Nombre
+              </button>
+            </div>
+          </div>
+          {sortedSpaces.map((s) => {
+            const spacePoints = sortItems(points.filter((p) => p.space_id === s.id), sortMode);
             const pointProgresses = spacePoints.map((p) => getPointProgress(p));
             const avgProgress = pointProgresses.length ? Math.round(pointProgresses.reduce((a, b) => a + b, 0) / pointProgresses.length) : 0;
+            const spacePhases = aggregatePhaseProgress(spacePoints);
 
             return (
               <div key={s.id} className="bg-white rounded-xl border border-border overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <p className="font-medium text-sm">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {avgProgress}% completado</p>
+                <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-muted/30">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      {sortMode === "manual" && s.order ? (
+                        <span className="text-xs font-mono text-muted-foreground flex-shrink-0">{formatOrder(s.order)}</span>
+                      ) : null}
+                      <p className="font-medium text-sm truncate">{s.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground">{spacePoints.length} puntos · {avgProgress}%</p>
+                      <PhaseChips phases={spacePhases} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-28 h-2 bg-muted rounded-full">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="hidden sm:block w-28 h-2 bg-muted rounded-full">
                       <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${avgProgress}%` }} />
                     </div>
                     <button
-                      onClick={() => { setEditSpace(s); setEditSpaceName(s.name); setEditSpaceType(s.space_type || "habitacion"); }}
+                      onClick={() => openEditSpace(s)}
                       className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -184,25 +237,31 @@ export default function FloorDetail() {
                 </div>
                 {spacePoints.length > 0 && (
                   <div className="divide-y divide-border">
-                    {spacePoints.map((pt, ptIdx) => {
+                    {spacePoints.map((pt) => {
                       const progress = getPointProgress(pt);
+                      const phases = getPointPhaseProgress(pt);
                       return (
                       <Link
                         key={pt.id}
                         to={`/checklist/${pt.id}`}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
                       >
+                        {sortMode === "manual" && pt.order ? (
+                          <span className="text-xs font-mono text-muted-foreground w-6 text-right flex-shrink-0">{formatOrder(pt.order)}</span>
+                        ) : null}
                         <DeviceIcon type={pt.device_type} size="sm" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-medium">{pt.name}</p>
-                            <span className="text-xs text-muted-foreground font-medium">{progress}%</span>
+                            <p className="text-sm font-medium truncate">{pt.name}</p>
+                            <span className="text-xs text-muted-foreground font-medium flex-shrink-0">{progress}%</span>
                           </div>
+                          {pt.description && <p className="text-xs text-muted-foreground truncate">{pt.description}</p>}
                           {pt.technician && <p className="text-xs text-muted-foreground">{pt.technician}</p>}
                           <ProgressBar value={progress} className="mt-1.5 max-w-[140px]" />
+                          <PhaseChips phases={phases} className="mt-1.5" />
                         </div>
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); setEditPointName(pt.name); setEditPointType(pt.device_type); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditPoint(pt); }}
                           className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -241,6 +300,10 @@ export default function FloorDetail() {
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
+              <Input placeholder="Ej: 1 o 1.2" value={spaceOrder} onChange={(e) => setSpaceOrder(e.target.value)} inputMode="decimal" />
+            </div>
             <Button onClick={addSpace} className="w-full">Crear espacio</Button>
           </div>
         </DialogContent>
@@ -266,6 +329,14 @@ export default function FloorDetail() {
                 <SelectItem value="access_point">AP WiFi</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <Label className="text-xs mb-1.5 block">Descripción (opcional)</Label>
+              <Textarea placeholder="Ubicación, referencia, detalles..." value={pointDesc} onChange={(e) => setPointDesc(e.target.value)} rows={2} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
+              <Input placeholder="Ej: 1 o 1.2" value={pointOrder} onChange={(e) => setPointOrder(e.target.value)} inputMode="decimal" />
+            </div>
             <Button onClick={addPoint} className="w-full">Crear punto</Button>
           </div>
         </DialogContent>
@@ -297,6 +368,10 @@ export default function FloorDetail() {
                 <SelectItem value="otro">Otro</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
+              <Input placeholder="Ej: 1 o 1.2" value={editSpaceOrder} onChange={(e) => setEditSpaceOrder(e.target.value)} inputMode="decimal" />
+            </div>
             <Button onClick={saveEditSpace} className="w-full">Guardar</Button>
           </div>
         </DialogContent>
@@ -316,6 +391,14 @@ export default function FloorDetail() {
                 <SelectItem value="access_point">AP WiFi</SelectItem>
               </SelectContent>
             </Select>
+            <div>
+              <Label className="text-xs mb-1.5 block">Descripción (opcional)</Label>
+              <Textarea placeholder="Ubicación, referencia, detalles..." value={editPointDesc} onChange={(e) => setEditPointDesc(e.target.value)} rows={2} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
+              <Input placeholder="Ej: 1 o 1.2" value={editPointOrder} onChange={(e) => setEditPointOrder(e.target.value)} inputMode="decimal" />
+            </div>
             <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
           </div>
         </DialogContent>

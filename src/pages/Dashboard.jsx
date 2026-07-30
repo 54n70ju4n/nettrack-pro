@@ -6,7 +6,7 @@ import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { getPointProgress } from "@/lib/pointProgress";
+import { getPointProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-react";
@@ -118,6 +118,8 @@ export default function Dashboard() {
       return { name: labels[t], total: fp.length, done, pct };
     }).filter((d) => d.total > 0);
   }, [filtered]);
+
+  const phaseProgress = useMemo(() => aggregatePhaseProgress(filtered), [filtered]);
 
   const statusPieData = useMemo(() => {
     return [
@@ -271,6 +273,15 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Phase progress */}
+      <div className="bg-white rounded-xl border border-border p-5">
+        <h3 className="font-heading font-semibold text-sm mb-4">Avance por fase</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <PhaseCard label="Fase Piso" dot="bg-blue-500" data={phaseProgress.piso} />
+          <PhaseCard label="Fase Rack" dot="bg-purple-500" data={phaseProgress.rack} />
+        </div>
+      </div>
+
       {/* Device type progress */}
       <div className="bg-white rounded-xl border border-border p-5">
         <h3 className="font-heading font-semibold text-sm mb-4">Avance por tipo de dispositivo</h3>
@@ -315,6 +326,24 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PhaseCard({ label, dot, data }) {
+  const pending = Math.max(0, data.total - data.done);
+  return (
+    <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+      <ProgressRing percentage={data.pct} size={52} strokeWidth={4} />
+      <div className="min-w-0">
+        <p className="font-medium text-sm flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${dot}`} /> {label}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {data.total ? `${data.done}/${data.total} ítems · faltan ${pending}` : "Sin ítems"}
+        </p>
+        <ProgressBar value={data.pct} className="mt-1.5 w-32" />
       </div>
     </div>
   );

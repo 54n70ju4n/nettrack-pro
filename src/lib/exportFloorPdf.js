@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { getTemplate, FIELD_LABELS } from "./checklistTemplates";
-import { getPointProgress } from "./pointProgress";
+import { getPointPhaseProgress } from "./pointProgress";
+import { sortItems } from "./ordering";
 
 const STATUS_LABELS = {
   pendiente: "Pendiente",
@@ -67,18 +68,11 @@ function renderFloor(doc, floor, spaces, points, ctx) {
   doc.line(margin, y, pageW - margin, y);
   y += 10;
 
-  // Sort spaces
-  const typeOrder = { habitacion: 0, sala: 1, pasillo: 2, otro: 99 };
-  const sortedSpaces = [...spaces].sort((a, b) => {
-    const d = (typeOrder[a.space_type] ?? 99) - (typeOrder[b.space_type] ?? 99);
-    if (d !== 0) return d;
-    return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true });
-  });
+  // Sort spaces by manual order (name as tie-breaker), matching the app.
+  const sortedSpaces = sortItems(spaces, "manual");
 
   for (const s of sortedSpaces) {
-    const spacePoints = points
-      .filter((p) => p.space_id === s.id)
-      .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { numeric: true }));
+    const spacePoints = sortItems(points.filter((p) => p.space_id === s.id), "manual");
 
     ensureSpace(30);
     doc.setFillColor(241, 245, 249);
@@ -113,10 +107,30 @@ function renderFloor(doc, floor, spaces, points, ctx) {
       doc.text(STATUS_LABELS[pt.status] || "Pendiente", pageW - margin - 4, y, { align: "right" });
       y += 12;
 
+      if (pt.description) {
+        doc.setTextColor(100, 116, 139);
+        doc.setFontSize(8);
+        const descLines = doc.splitTextToSize(pt.description, pageW - 2 * margin - 8);
+        doc.text(descLines, margin + 4, y);
+        y += descLines.length * 10 + 1;
+      }
+
       if (pt.technician) {
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(8);
         doc.text(`Técnico: ${pt.technician}`, margin + 4, y);
+        y += 11;
+      }
+
+      // Phase progress (Piso / Rack)
+      const phases = getPointPhaseProgress(pt);
+      const phaseParts = [];
+      if (phases.piso.total) phaseParts.push(`Piso: ${phases.piso.pct}% (${phases.piso.done}/${phases.piso.total})`);
+      if (phases.rack.total) phaseParts.push(`Rack: ${phases.rack.pct}% (${phases.rack.done}/${phases.rack.total})`);
+      if (phaseParts.length) {
+        doc.setTextColor(71, 85, 105);
+        doc.setFontSize(7.5);
+        doc.text(phaseParts.join("   |   "), margin + 4, y);
         y += 11;
       }
 

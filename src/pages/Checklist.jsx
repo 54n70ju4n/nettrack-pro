@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
+import ProgressBar from "@/components/shared/ProgressBar";
 import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
+import { getPointPhaseProgress } from "@/lib/pointProgress";
 import { usePoint, useFloor, useSpace, useTechnicians, useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
@@ -68,6 +70,7 @@ export default function Checklist() {
   }
 
   const tpl = getTemplate(form.device_type);
+  const phases = getPointPhaseProgress(form);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-8">
@@ -118,11 +121,28 @@ export default function Checklist() {
               </SelectContent>
             </Select>
           </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs mb-1.5 block">Descripción</Label>
+            <Textarea
+              value={form.description || ""}
+              onChange={(e) => update("description", e.target.value)}
+              placeholder="Descripción del punto (ubicación, referencia, detalles)..."
+              rows={2}
+            />
+          </div>
+        </div>
+      </Section>
+
+      {/* Phase progress */}
+      <Section title="Avance por fase">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <PhaseProgress label="Fase Piso" data={phases.piso} />
+          <PhaseProgress label="Fase Rack" data={phases.rack} />
         </div>
       </Section>
 
       {/* Activities */}
-      <Section title="Actividades">
+      <Section title="Actividades" phase="piso">
         <div className="space-y-3">
           {tpl.activities.map((field) => (
             <div key={field} className="flex items-center justify-between">
@@ -147,7 +167,7 @@ export default function Checklist() {
 
       {/* Accessories */}
       {(tpl.accessories.length > 0 || (tpl.customChecks || []).some((c) => c.category === "accessories")) && (
-        <Section title="Accesorios">
+        <Section title="Accesorios" phase="piso">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {tpl.accessories.map((field) => (
               <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
@@ -160,7 +180,7 @@ export default function Checklist() {
       )}
 
       {/* Equipment */}
-      <Section title="Equipo">
+      <Section title="Equipo" phase="rack">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {tpl.equipment.map((field) => (
             <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
@@ -173,7 +193,7 @@ export default function Checklist() {
 
       {/* Network */}
       {tpl.showNetwork && (
-      <Section title="Red">
+      <Section title="Red" phase="rack">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label className="text-xs mb-1.5 block">Puerto Patch Panel</Label>
@@ -234,11 +254,37 @@ export default function Checklist() {
   );
 }
 
-function Section({ title, children }) {
+const PHASE_BADGE = {
+  piso: "bg-blue-50 text-blue-600",
+  rack: "bg-purple-50 text-purple-600",
+};
+
+function Section({ title, phase, children }) {
   return (
     <div className="bg-white rounded-xl border border-border p-4 md:p-5">
-      <h3 className="font-heading font-semibold text-sm mb-3">{title}</h3>
+      <div className="flex items-center gap-2 mb-3">
+        <h3 className="font-heading font-semibold text-sm">{title}</h3>
+        {phase && (
+          <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${PHASE_BADGE[phase]}`}>
+            {phase === "piso" ? "Piso" : "Rack"}
+          </span>
+        )}
+      </div>
       {children}
+    </div>
+  );
+}
+
+function PhaseProgress({ label, data }) {
+  return (
+    <div className="p-3 rounded-lg bg-muted/40">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground">
+          {data.total ? `${data.done}/${data.total} · ${data.pct}%` : "N/A"}
+        </span>
+      </div>
+      <ProgressBar value={data.pct} />
     </div>
   );
 }

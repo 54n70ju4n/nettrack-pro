@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Nombre/ID del punto (ej: ETH-01, C1, AP1)"
     },
+    "description": {
+      "type": "string",
+      "description": "Descripción opcional del punto (ubicación, detalles)"
+    },
     "floor_id": {
       "type": "string"
     },
