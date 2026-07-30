@@ -8,15 +8,27 @@ export const PHASES = [
   { key: "rack", label: "Rack" },
 ];
 
+// Equipment fields that belong to the Piso (on-site) phase even though they live
+// in the "equipment" template group. The remaining equipment fields are Rack.
+const PISO_EQUIPMENT = new Set(["equipo_instalado", "equipo_probado"]);
+
+// Phase for a single equipment field. Only meaningful for equipment-group fields;
+// activities/accessories are always Piso and are grouped by category elsewhere.
+export function getEquipmentFieldPhase(field) {
+  return PISO_EQUIPMENT.has(field) ? "piso" : "rack";
+}
+
 // Returns the field keys + custom checks that belong to each phase for a template.
 function phaseGroups(tpl) {
+  const equipmentPiso = tpl.equipment.filter((f) => PISO_EQUIPMENT.has(f));
+  const equipmentRack = tpl.equipment.filter((f) => !PISO_EQUIPMENT.has(f));
   return {
     piso: {
-      fields: [...tpl.activities, ...tpl.accessories],
+      fields: [...tpl.activities, ...tpl.accessories, ...equipmentPiso],
       custom: (tpl.customChecks || []).filter((c) => c.category === "activities" || c.category === "accessories"),
     },
     rack: {
-      fields: [...tpl.equipment],
+      fields: [...equipmentRack],
       custom: (tpl.customChecks || []).filter((c) => c.category === "equipment"),
     },
   };

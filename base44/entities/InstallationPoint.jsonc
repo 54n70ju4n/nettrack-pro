@@ -76,6 +76,11 @@
       "type": "boolean",
       "default": false
     },
+    "acc_patch_cord": {
+      "type": "boolean",
+      "default": false,
+      "description": "Patch cord instalado (puertos Ethernet)"
+    },
     "acc_rotulo": {
       "type": "boolean",
       "default": false

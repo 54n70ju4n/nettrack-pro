@@ -13,7 +13,7 @@ import ProgressBar from "@/components/shared/ProgressBar";
 import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
-import { getPointPhaseProgress } from "@/lib/pointProgress";
+import { getPointPhaseProgress, getEquipmentFieldPhase } from "@/lib/pointProgress";
 import { usePoint, useFloor, useSpace, useTechnicians, useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
@@ -179,14 +179,14 @@ export default function Checklist() {
         </Section>
       )}
 
-      {/* Equipment */}
-      <Section title="Equipo" phase="rack">
+      {/* Equipment (mixed phase: some items are Piso, some Rack) */}
+      <Section title="Equipo">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {tpl.equipment.map((field) => (
-            <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} />
+            <CheckItem key={field} label={FIELD_LABELS[field]} checked={form[field]} onChange={(v) => update(field, v)} phase={getEquipmentFieldPhase(field)} />
           ))}
           {(tpl.customChecks || []).filter((c) => c.category === "equipment").map((c) => (
-            <CheckItem key={c.id} label={c.label} checked={form.custom_checks?.[c.id]} onChange={(v) => update("custom_checks", { ...(form.custom_checks || {}), [c.id]: v })} />
+            <CheckItem key={c.id} label={c.label} checked={form.custom_checks?.[c.id]} onChange={(v) => update("custom_checks", { ...(form.custom_checks || {}), [c.id]: v })} phase="rack" />
           ))}
         </div>
       </Section>
@@ -289,11 +289,16 @@ function PhaseProgress({ label, data }) {
   );
 }
 
-function CheckItem({ label, checked, onChange }) {
+function CheckItem({ label, checked, onChange, phase }) {
   return (
     <label className="flex items-center gap-2.5 cursor-pointer group">
       <Checkbox checked={!!checked} onCheckedChange={onChange} />
       <span className="text-sm text-foreground group-hover:text-primary transition-colors">{label}</span>
+      {phase && (
+        <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${PHASE_BADGE[phase]}`}>
+          {phase === "piso" ? "Piso" : "Rack"}
+        </span>
+      )}
     </label>
   );
 }
