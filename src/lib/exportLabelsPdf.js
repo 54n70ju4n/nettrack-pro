@@ -1,5 +1,10 @@
-import { jsPDF } from "jspdf";
 import { getPageSize, computeLayout, buildLabelLines, expandPoints } from "./labelLayout";
+
+// jsPDF is ~580 kB with its deps; load it on demand only when the user exports.
+async function loadJsPDF() {
+  const mod = await import("jspdf");
+  return mod.jsPDF;
+}
 
 function hexToRgb(hex) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
@@ -79,7 +84,8 @@ function drawLabel(doc, point, config, layout, maps) {
 }
 
 // Builds the jsPDF document for the given points + config.
-export function buildLabelsDoc(points, config, maps = {}) {
+export async function buildLabelsDoc(points, config, maps = {}) {
+  const jsPDF = await loadJsPDF();
   const { w, h } = getPageSize(config);
   const doc = new jsPDF({ unit: "mm", format: [w, h], orientation: config.orientation });
   const layout = computeLayout(config);
@@ -97,15 +103,19 @@ export function buildLabelsDoc(points, config, maps = {}) {
   return doc;
 }
 
-export function downloadLabelsPdf(points, config, maps) {
-  const doc = buildLabelsDoc(points, config, maps);
+export async function downloadLabelsPdf(points, config, maps) {
+  const doc = await buildLabelsDoc(points, config, maps);
   doc.save(`rotulos-nettrack-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 // Opens the PDF in a new tab and triggers the browser print dialog.
-export function printLabelsPdf(points, config, maps) {
-  const doc = buildLabelsDoc(points, config, maps);
+export async function printLabelsPdf(points, config, maps) {
+  // Open the tab synchronously (within the click gesture) so the async jsPDF
+  // import below doesn't trip pop-up blockers, then point it at the blob.
+  const win = window.open("", "_blank");
+  const doc = await buildLabelsDoc(points, config, maps);
   doc.autoPrint();
   const url = doc.output("bloburl");
-  window.open(url, "_blank");
+  if (win) win.location = url;
+  else window.open(url, "_blank");
 }

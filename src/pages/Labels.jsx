@@ -291,8 +291,8 @@ export default function Labels() {
   const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
 
   const canPrint = selectedPoints.length > 0 && computeLayout(config).valid;
-  const handlePrint = () => canPrint && printLabelsPdf(selectedPoints, config, maps);
-  const handleDownload = () => canPrint && downloadLabelsPdf(selectedPoints, config, maps);
+  const handlePrint = () => { if (canPrint) printLabelsPdf(selectedPoints, config, maps); };
+  const handleDownload = () => { if (canPrint) run(() => downloadLabelsPdf(selectedPoints, config, maps)); };
 
   if (loading) {
     return (

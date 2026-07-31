@@ -1,7 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { usePoints, useFloors, useSpaces, useTemplates } from "@/lib/queries";
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -10,6 +9,9 @@ import { getPointProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-react";
+
+// Lazy so recharts (~380 kB) is not part of the initial Dashboard chunk.
+const StatusPieChart = lazy(() => import("@/components/dashboard/StatusPieChart"));
 
 const STATUS_COLORS = { pendiente: "#94a3b8", en_proceso: "#f59e0b", finalizado: "#22c55e", con_observaciones: "#ef4444" };
 
@@ -154,16 +156,16 @@ export default function Dashboard() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
         <Select value={filterFloor} onValueChange={setFilterFloor}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Piso" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Piso" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los pisos</SelectItem>
             {floors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
             <SelectItem value="pendiente">Pendiente</SelectItem>
@@ -173,21 +175,21 @@ export default function Dashboard() {
           </SelectContent>
         </Select>
         <Select value={filterTech} onValueChange={setFilterTech}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Técnico" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Técnico" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los técnicos</SelectItem>
             {technicians.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterDevice} onValueChange={setFilterDevice}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Dispositivo" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Dispositivo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los dispositivos</SelectItem>
             {deviceTypes.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterMissing} onValueChange={setFilterMissing}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Falta por…" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Falta por…" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Cualquier pendiente</SelectItem>
             {missingOptions.map((m) => <SelectItem key={m.value} value={m.value}>Falta: {m.label}</SelectItem>)}
@@ -251,14 +253,9 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground py-8 text-center">No hay datos aún</p>
           ) : (
             <div className="flex items-center justify-center gap-6">
-              <ResponsiveContainer width={180} height={180}>
-                <PieChart>
-                  <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                    {statusPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div className="w-[180px] h-[180px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                <StatusPieChart data={statusPieData} />
+              </Suspense>
               <div className="space-y-2">
                 {statusPieData.map((d) => (
                   <div key={d.name} className="flex items-center gap-2 text-xs">

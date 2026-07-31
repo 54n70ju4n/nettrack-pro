@@ -1,7 +1,13 @@
-import { jsPDF } from "jspdf";
 import { getTemplate, FIELD_LABELS } from "./checklistTemplates";
 import { getPointPhaseProgress } from "./pointProgress";
 import { sortItems } from "./ordering";
+
+// jsPDF (and its transitive deps) is ~580 kB, so load it on demand the first
+// time the user actually exports, instead of on every page that can export.
+async function loadJsPDF() {
+  const mod = await import("jspdf");
+  return mod.jsPDF;
+}
 
 const STATUS_LABELS = {
   pendiente: "Pendiente",
@@ -210,7 +216,8 @@ function drawHeader(doc, title, pageW, margin) {
   doc.text(title, margin, 38);
 }
 
-export function exportFloorPdf(floor, spaces, points) {
+export async function exportFloorPdf(floor, spaces, points) {
+  const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -220,7 +227,8 @@ export function exportFloorPdf(floor, spaces, points) {
   doc.save(`piso-${(floor?.name || "piso").replace(/\s+/g, "-")}.pdf`);
 }
 
-export function exportProjectPdf(floors, spaces, points) {
+export async function exportProjectPdf(floors, spaces, points) {
+  const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();

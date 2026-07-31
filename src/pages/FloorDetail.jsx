@@ -60,7 +60,7 @@ export default function FloorDetail() {
   const [pointToDelete, setPointToDelete] = useState(null);
   const [sortMode, setSortMode] = useState("manual");
 
-  const exportPdf = () => exportFloorPdf(floor, sortedSpaces, points);
+  const exportPdf = () => run(() => exportFloorPdf(floor, sortedSpaces, points));
 
   const saveFloorName = () => run(async () => {
     if (!floorEditVal.trim()) return;
@@ -167,10 +167,10 @@ export default function FloorDetail() {
           </div>
           <p className="text-muted-foreground text-sm mt-0.5">{spaces.length} espacios · {points.length} puntos</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={exportPdf} size="sm" variant="outline"><Download className="w-4 h-4 mr-1.5" /> Exportar PDF</Button>
-          <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
-          <Button onClick={() => setPointDialog(true)} size="sm"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
+        <div className="flex w-full sm:w-auto flex-wrap gap-2">
+          <Button onClick={exportPdf} size="sm" variant="outline" className="flex-1 sm:flex-none"><Download className="w-4 h-4 mr-1.5" /> Exportar PDF</Button>
+          <Button onClick={() => setSpaceDialog(true)} size="sm" variant="outline" className="flex-1 sm:flex-none"><Plus className="w-4 h-4 mr-1.5" /> Espacio</Button>
+          <Button onClick={() => setPointDialog(true)} size="sm" className="flex-1 sm:flex-none"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
         </div>
       </div>
 

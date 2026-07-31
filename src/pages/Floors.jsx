@@ -86,13 +86,13 @@ export default function Floors() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Pisos</h1>
           <p className="text-muted-foreground text-sm mt-1">Estructura del edificio</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full sm:w-auto flex-wrap gap-2">
           {floors.length > 0 && (
-            <Button onClick={() => run(async () => exportProjectPdf(floors, spaces, points))} size="sm" variant="outline">
+            <Button onClick={() => run(async () => exportProjectPdf(floors, spaces, points))} size="sm" variant="outline" className="flex-1 sm:flex-none">
               <Download className="w-4 h-4 mr-1.5" /> Exportar proyecto
             </Button>
           )}
-          <Button onClick={() => setDialogOpen(true)} size="sm">
+          <Button onClick={() => setDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
             <Plus className="w-4 h-4 mr-1.5" /> Agregar piso
           </Button>
         </div>

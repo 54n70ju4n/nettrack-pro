@@ -133,46 +133,48 @@ export default function Points() {
         <p className="text-muted-foreground text-sm mt-1">{filtered.length} de {points.length} puntos</p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
+        <div className="relative flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar punto..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Select value={filterFloor} onValueChange={setFilterFloor}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Piso" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {floors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Estado" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pendiente">Pendiente</SelectItem>
-            <SelectItem value="en_proceso">En proceso</SelectItem>
-            <SelectItem value="finalizado">Finalizado</SelectItem>
-            <SelectItem value="con_observaciones">Con obs.</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="ethernet">Ethernet</SelectItem>
-            <SelectItem value="camara">Cámara</SelectItem>
-            <SelectItem value="access_point">AP WiFi</SelectItem>
-          </SelectContent>
-        </Select>
-        {technicians.length > 0 && (
-          <Select value={filterTech} onValueChange={setFilterTech}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Técnico" /></SelectTrigger>
+        <div className="grid grid-cols-2 sm:contents gap-2">
+          <Select value={filterFloor} onValueChange={setFilterFloor}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Piso" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {technicians.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              {floors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
             </SelectContent>
           </Select>
-        )}
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Estado" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pendiente">Pendiente</SelectItem>
+              <SelectItem value="en_proceso">En proceso</SelectItem>
+              <SelectItem value="finalizado">Finalizado</SelectItem>
+              <SelectItem value="con_observaciones">Con obs.</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="Tipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="ethernet">Ethernet</SelectItem>
+              <SelectItem value="camara">Cámara</SelectItem>
+              <SelectItem value="access_point">AP WiFi</SelectItem>
+            </SelectContent>
+          </Select>
+          {technicians.length > 0 && (
+            <Select value={filterTech} onValueChange={setFilterTech}>
+              <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Técnico" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {technicians.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-border overflow-hidden">
