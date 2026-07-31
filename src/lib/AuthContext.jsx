@@ -33,14 +33,35 @@ export const AuthProvider = ({ children }) => {
         token: appParams.token, // Include token if available
         interceptResponses: true
       });
-      
+
+      // When a token is present we already know we'll need the current user, and
+      // auth.me() doesn't depend on public-settings — fire both in parallel and
+      // reconcile below, so we save a serial round-trip on startup. The result is
+      // captured (never throws) so it can't clobber the public-settings error path.
+      const mePromise = appParams.token
+        ? base44.auth.me().then((u) => ({ ok: true, user: u })).catch((e) => ({ ok: false, error: e }))
+        : null;
+
       try {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
-        
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
-          await checkUserAuth();
+
+        // If we got the app public settings successfully, reconcile the (already
+        // in-flight) user auth check.
+        if (mePromise) {
+          const res = await mePromise;
+          if (res.ok) {
+            setUser(res.user);
+            setIsAuthenticated(true);
+          } else {
+            console.error('User auth check failed:', res.error);
+            setIsAuthenticated(false);
+            if (res.error?.status === 401 || res.error?.status === 403) {
+              setAuthError({ type: 'auth_required', message: 'Authentication required' });
+            }
+          }
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
         } else {
           setIsLoadingAuth(false);
           setIsAuthenticated(false);

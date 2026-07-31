@@ -6,10 +6,10 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { useEffect, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import ScrollToTop from './components/ScrollToTop';
 import AppLayout from './components/layout/AppLayout';
-import { loadTemplatesFromDB } from './lib/checklistTemplates';
+import { useTemplates } from './lib/queries';
 
 // Route-level code splitting: each page loads on demand instead of shipping
 // in the initial bundle.
@@ -31,8 +31,10 @@ const PageLoader = () => (
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Load templates from DB on app start
-  useEffect(() => { loadTemplatesFromDB(); }, []);
+  // Prime the checklist-template cache via react-query. Sharing the ["templates"]
+  // query key means pages that also call useTemplates() reuse this one request
+  // instead of issuing a duplicate fetch on startup.
+  useTemplates();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
