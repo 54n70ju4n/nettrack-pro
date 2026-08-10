@@ -5,10 +5,10 @@ import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
-import { getPointProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
+import { getPointProgress, aggregatePhaseProgress, hasObservations } from "@/lib/pointProgress";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo, MessageSquareText } from "lucide-react";
 
 // Lazy so recharts (~380 kB) is not part of the initial Dashboard chunk.
 const StatusPieChart = lazy(() => import("@/components/dashboard/StatusPieChart"));
@@ -44,7 +44,11 @@ export default function Dashboard() {
   const filtered = useMemo(() => {
     return points.filter((p) => {
       if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
-      if (filterStatus !== "all" && p.status !== filterStatus) return false;
+      if (filterStatus !== "all") {
+        // "con_observaciones" matches by status OR by observation text.
+        const ok = filterStatus === "con_observaciones" ? hasObservations(p) : p.status === filterStatus;
+        if (!ok) return false;
+      }
       if (filterTech !== "all" && p.technician !== filterTech) return false;
       if (filterDevice !== "all" && p.device_type !== filterDevice) return false;
       if (filterMissing !== "all" && !isPointMissing(p, filterMissing)) return false;
@@ -85,7 +89,8 @@ export default function Dashboard() {
     const finalizados = filtered.filter((p) => p.status === "finalizado").length;
     const enProceso = filtered.filter((p) => p.status === "en_proceso").length;
     const pendientes = filtered.filter((p) => p.status === "pendiente").length;
-    const conObs = filtered.filter((p) => p.status === "con_observaciones").length;
+    // Observation-aware, so it matches the "Con observaciones" filter.
+    const conObs = filtered.filter(hasObservations).length;
     const pct = total ? filtered.reduce((sum, p) => sum + getPointProgress(p), 0) / total : 0;
     return { total, finalizados, enProceso, pendientes, conObs, pct };
   }, [filtered]);
@@ -123,14 +128,18 @@ export default function Dashboard() {
 
   const phaseProgress = useMemo(() => aggregatePhaseProgress(filtered), [filtered]);
 
+  // Pie is a distribution by actual status (mutually exclusive, sums to total),
+  // so it counts raw status rather than the observation-aware KPI.
   const statusPieData = useMemo(() => {
+    const c = { pendiente: 0, en_proceso: 0, finalizado: 0, con_observaciones: 0 };
+    for (const p of filtered) c[p.status] = (c[p.status] || 0) + 1;
     return [
-      { name: "Pendiente", value: stats.pendientes, color: STATUS_COLORS.pendiente },
-      { name: "En proceso", value: stats.enProceso, color: STATUS_COLORS.en_proceso },
-      { name: "Finalizado", value: stats.finalizados, color: STATUS_COLORS.finalizado },
-      { name: "Con obs.", value: stats.conObs, color: STATUS_COLORS.con_observaciones },
+      { name: "Pendiente", value: c.pendiente, color: STATUS_COLORS.pendiente },
+      { name: "En proceso", value: c.en_proceso, color: STATUS_COLORS.en_proceso },
+      { name: "Finalizado", value: c.finalizado, color: STATUS_COLORS.finalizado },
+      { name: "Con obs.", value: c.con_observaciones, color: STATUS_COLORS.con_observaciones },
     ].filter((d) => d.value > 0);
-  }, [stats]);
+  }, [filtered]);
 
   const incompletePoints = useMemo(() => {
     return filtered
@@ -312,7 +321,10 @@ export default function Dashboard() {
                 <DeviceIcon type={pt.device_type} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">{pt.name}</span>
+                    <span className="text-sm font-medium truncate group-hover:text-primary transition-colors inline-flex items-center gap-1 min-w-0">
+                      <span className="truncate">{pt.name}</span>
+                      {pt.observaciones?.trim() && <MessageSquareText className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="Con observaciones" />}
+                    </span>
                     <span className="text-xs text-muted-foreground flex-shrink-0">{pt.progress}%</span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{floorMap[pt.floor_id] || "—"} · {spaceMap[pt.space_id] || "—"}</p>

@@ -17,9 +17,9 @@ import {
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import PhaseChips from "@/components/shared/PhaseChips";
-import { Loader2, Search, ChevronRight, Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { Loader2, Search, ChevronRight, Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUpDown, MessageSquareText } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
-import { getPointProgress, getPointPhaseProgress } from "@/lib/pointProgress";
+import { getPointProgress, getPointPhaseProgress, hasObservations } from "@/lib/pointProgress";
 import { parseOrder, formatOrder } from "@/lib/ordering";
 
 export default function Points() {
@@ -92,7 +92,11 @@ export default function Points() {
     const result = points.filter((p) => {
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterFloor !== "all" && p.floor_id !== filterFloor) return false;
-      if (filterStatus !== "all" && p.status !== filterStatus) return false;
+      if (filterStatus !== "all") {
+        // "con_observaciones" matches by status OR by observation text.
+        const ok = filterStatus === "con_observaciones" ? hasObservations(p) : p.status === filterStatus;
+        if (!ok) return false;
+      }
       if (filterType !== "all" && p.device_type !== filterType) return false;
       if (filterTech !== "all" && p.technician !== filterTech) return false;
       return true;
@@ -199,7 +203,10 @@ export default function Points() {
                   <div className="col-span-3 flex items-center gap-2.5 min-w-0">
                     <DeviceIcon type={pt.device_type} size="sm" />
                     <div className="min-w-0">
-                      <span className="font-medium text-sm">{pt.name}</span>
+                      <span className="font-medium text-sm inline-flex items-center gap-1">
+                        {pt.name}
+                        {pt.observaciones?.trim() && <MessageSquareText className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" title="Con observaciones" />}
+                      </span>
                       {pt.description && <p className="text-xs text-muted-foreground truncate">{pt.description}</p>}
                     </div>
                   </div>

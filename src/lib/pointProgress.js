@@ -1,5 +1,12 @@
 import { getTemplate } from "./checklistTemplates";
 
+// A point counts as "con observaciones" when flagged with that status OR when it
+// carries any observation text, so filters surface noted points regardless of
+// their workflow status.
+export function hasObservations(point) {
+  return point?.status === "con_observaciones" || !!point?.observaciones?.trim();
+}
+
 // Installation phases. The "Piso" phase groups the on-site work (activities +
 // accessories); the "Rack" phase groups the equipment/rack work. Custom checks
 // follow their category: activities/accessories -> piso, equipment -> rack.
