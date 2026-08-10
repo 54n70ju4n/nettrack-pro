@@ -226,7 +226,7 @@ export default function Checklist() {
         <div className="flex flex-wrap gap-3">
           {(form.evidencia || []).map((url, i) => (
             <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border border-border group">
-              <img src={url} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover" />
+              <img src={url} alt={`Evidencia ${i + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               <button
                 onClick={() => removePhoto(url)}
                 className="absolute top-1 right-1 p-0.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"

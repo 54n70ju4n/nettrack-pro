@@ -1,6 +1,7 @@
-import React, { useState, useMemo, lazy, Suspense } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePoints, useFloors, useSpaces, useTemplates } from "@/lib/queries";
+import StatusPieChart from "@/components/dashboard/StatusPieChart";
 import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -9,9 +10,6 @@ import { getPointProgress, aggregatePhaseProgress, hasObservations } from "@/lib
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, AlertCircle, Clock, Loader2, ListTodo, MessageSquareText } from "lucide-react";
-
-// Lazy so recharts (~380 kB) is not part of the initial Dashboard chunk.
-const StatusPieChart = lazy(() => import("@/components/dashboard/StatusPieChart"));
 
 const STATUS_COLORS = { pendiente: "#94a3b8", en_proceso: "#f59e0b", finalizado: "#22c55e", con_observaciones: "#ef4444" };
 
@@ -262,9 +260,7 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground py-8 text-center">No hay datos aún</p>
           ) : (
             <div className="flex items-center justify-center gap-6">
-              <Suspense fallback={<div className="w-[180px] h-[180px] flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
-                <StatusPieChart data={statusPieData} />
-              </Suspense>
+              <StatusPieChart data={statusPieData} />
               <div className="space-y-2">
                 {statusPieData.map((d) => (
                   <div key={d.name} className="flex items-center gap-2 text-xs">

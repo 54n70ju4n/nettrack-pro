@@ -42,5 +42,17 @@ export default defineConfig({
         ],
       },
     }),
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the stable React runtime into its own chunk so it stays cached
+        // across app deploys (app code changes don't invalidate it). jspdf and
+        // html2canvas are left alone so they keep their on-demand dynamic chunks.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
 });
