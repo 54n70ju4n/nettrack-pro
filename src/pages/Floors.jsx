@@ -10,20 +10,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { getPointProgress } from "@/lib/pointProgress";
-import { useFloors, useSpaces, usePoints, useInvalidateData } from "@/lib/queries";
+import { useInvalidateData } from "@/lib/queries";
+import { useScopedData, useProject } from "@/lib/ProjectContext";
+import { useAuth } from "@/lib/AuthContext";
 import { useAction } from "@/lib/useAction";
 import { exportProjectPdf } from "@/lib/exportFloorPdf";
 import DataError from "@/components/shared/DataError";
 
 export default function Floors() {
-  const floorsQ = useFloors();
-  const spacesQ = useSpaces();
-  const pointsQ = usePoints();
-  const floors = floorsQ.data ?? [];
-  const spaces = spacesQ.data ?? [];
-  const points = pointsQ.data ?? [];
-  const loading = floorsQ.isLoading || spacesQ.isLoading || pointsQ.isLoading;
-  const isError = floorsQ.isError || spacesQ.isError || pointsQ.isError;
+  const { floors, spaces, points, isLoading: loading, isError } = useScopedData();
+  const { activeProjectId, activeProject } = useProject();
+  const { user } = useAuth();
   const invalidate = useInvalidateData();
   const run = useAction();
 
@@ -52,8 +49,8 @@ export default function Floors() {
   });
 
   const addFloor = () => run(async () => {
-    if (!floorName.trim()) return;
-    await base44.entities.Floor.create({ name: floorName.trim(), order: floors.length });
+    if (!floorName.trim() || !activeProjectId) return;
+    await base44.entities.Floor.create({ name: floorName.trim(), order: floors.length, project_id: activeProjectId });
     setFloorName("");
     setDialogOpen(false);
     invalidate();
@@ -84,21 +81,29 @@ export default function Floors() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold tracking-tight">Pisos</h1>
-          <p className="text-muted-foreground text-sm mt-1">Estructura del edificio</p>
+          <p className="text-muted-foreground text-sm mt-1">{activeProject ? activeProject.project_name : "Estructura del edificio"}</p>
         </div>
         <div className="flex w-full sm:w-auto flex-wrap gap-2">
           {floors.length > 0 && (
-            <Button onClick={() => run(async () => exportProjectPdf(floors, spaces, points))} size="sm" variant="outline" className="flex-1 sm:flex-none">
+            <Button onClick={() => run(() => exportProjectPdf(floors, spaces, points, { project: activeProject, user }))} size="sm" variant="outline" className="flex-1 sm:flex-none">
               <Download className="w-4 h-4 mr-1.5" /> Exportar proyecto
             </Button>
           )}
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="flex-1 sm:flex-none">
+          <Button onClick={() => setDialogOpen(true)} size="sm" disabled={!activeProjectId} className="flex-1 sm:flex-none">
             <Plus className="w-4 h-4 mr-1.5" /> Agregar piso
           </Button>
         </div>
       </div>
 
-      {floors.length === 0 ? (
+      {!activeProjectId ? (
+        <div className="bg-white rounded-xl border border-border p-12 text-center">
+          <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Selecciona o crea un proyecto para gestionar sus pisos.</p>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link to="/proyectos"><Plus className="w-4 h-4 mr-1.5" /> Ir a Proyectos</Link>
+          </Button>
+        </div>
+      ) : floors.length === 0 ? (
         <div className="bg-white rounded-xl border border-border p-12 text-center">
           <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">No hay pisos registrados aún</p>

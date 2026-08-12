@@ -21,6 +21,24 @@ async function loadJsPDF() {
   return mod.jsPDF;
 }
 
+// Best-effort fetch of a remote image (project logo) as a data URL for
+// embedding. Returns null on CORS/network/format failure so the cover still
+// renders without it.
+async function fetchImageDataUrl(url) {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 const MARGIN = 40;
 const FOOTER = 44; // reserved bottom strip for the page number
 const GAP = 9; // vertical gap between cards
@@ -34,9 +52,13 @@ function formatToday() {
   return new Date().toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
 }
 
+function generatedBy(user) {
+  return user?.full_name || user?.name || user?.email || null;
+}
+
 // --- Report scaffolding ----------------------------------------------------
 
-function createReport(doc, title) {
+function createReport(doc, title, meta = {}) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const r = {
@@ -50,6 +72,9 @@ function createReport(doc, title) {
     title,
     crumb: "",
     started: false,
+    project: meta.project || null,
+    user: meta.user || null,
+    logoDataUrl: meta.logoDataUrl || null,
   };
   r.newPage = () => {
     doc.addPage();
@@ -73,7 +98,8 @@ function createReport(doc, title) {
 // Slim running head: brand on the left, current floor/space on the right.
 function drawPageTop(r) {
   const { doc, margin, pageW, contentW } = r;
-  line(doc, "NETTRACK PRO", margin, margin - 14, { size: 7, style: "bold", color: C.primary, charSpace: 1.2 });
+  const brand = r.project?.project_name || "NETTRACK PRO";
+  line(doc, brand.toUpperCase(), margin, margin - 14, { size: 7, style: "bold", color: C.primary, charSpace: 1.2, maxW: contentW * 0.5 });
   if (r.crumb) {
     line(doc, r.crumb, pageW - margin, margin - 14, { size: 7, color: C.faint, align: "right", maxW: contentW * 0.6 });
   }
@@ -98,7 +124,8 @@ function stampFooters(r) {
   doc.setPage(total);
 }
 
-// Cover banner: brand block in the primary color with the report identity.
+// Cover banner: brand block in the primary color with the report identity, plus
+// the project logo and metadata (client, address, who generated it).
 function drawCover(r, { kicker, title, subtitle }) {
   const { doc, margin, pageW } = r;
   const bandH = 124;
@@ -109,13 +136,39 @@ function drawCover(r, { kicker, title, subtitle }) {
   doc.circle(pageW - 66, 40, 50, "F");
   doc.circle(pageW - 28, 104, 20, "F");
 
+  // Optional project logo, top-right (on a white chip for contrast).
+  let kickerShift = 0;
+  if (r.logoDataUrl) {
+    const s = 46;
+    const lx = pageW - margin - s;
+    const ly = 16;
+    fill(doc, C.white);
+    doc.roundedRect(lx - 4, ly - 4, s + 8, s + 8, 6, 6, "F");
+    try { doc.addImage(r.logoDataUrl, lx, ly, s, s, undefined, "FAST"); } catch { /* unsupported format — skip */ }
+    kickerShift = s + 16;
+  }
+
   line(doc, "NETTRACK PRO", margin, 30, { size: 7.5, style: "bold", color: C.white, charSpace: 1.6 });
-  line(doc, kicker, pageW - margin, 30, { size: 7.5, color: C.primarySoft, align: "right" });
+  line(doc, kicker, pageW - margin - kickerShift, 30, { size: 7.5, color: C.primarySoft, align: "right" });
   line(doc, title, margin, 48, { size: 23, style: "bold", color: C.white, maxW: pageW - margin * 2 - 90 });
   line(doc, subtitle, margin, 86, { size: 9.5, color: C.primarySoft, maxW: pageW - margin * 2 - 60 });
 
   r.started = true;
   r.y = bandH + 22;
+
+  // Project metadata + author strip under the band.
+  const p = r.project;
+  const meta = [];
+  if (p?.client) meta.push(p.client);
+  if (p?.address) meta.push(p.address + (p.city ? `, ${p.city}` : ""));
+  if (p?.url) meta.push(p.url);
+  if (p?.contact_name) meta.push(`Contacto: ${p.contact_name}`);
+  const who = generatedBy(r.user);
+  if (who) meta.push(`Generado por ${who}`);
+  if (meta.length) {
+    line(doc, meta.join("   ·   "), margin, r.y, { size: 8, color: C.muted, maxW: r.contentW });
+    r.y += 18;
+  }
 }
 
 // Card frame with a bold title (+ optional phase badge). Returns the body box.
@@ -583,15 +636,21 @@ async function renderFloorScope(r, floor, spaces, points, { showBanner = false, 
 //
 // The build* functions return the jsPDF document (handy for tests/previews);
 // the export* wrappers are what the UI calls and trigger the download.
+// `opts` carries { project, user } for the branded cover.
 
-export async function buildFloorDoc(floor, spaces, points) {
+async function reportMeta(opts) {
+  const logoDataUrl = opts.project?.logo_url ? await fetchImageDataUrl(opts.project.logo_url) : null;
+  return { project: opts.project || null, user: opts.user || null, logoDataUrl };
+}
+
+export async function buildFloorDoc(floor, spaces, points, opts = {}) {
   const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const floorName = floor?.name || "Piso";
-  const r = createReport(doc, `NetTrack Pro · Reporte de piso · ${floorName}`);
+  const r = createReport(doc, `NetTrack Pro · Reporte de piso · ${floorName}`, await reportMeta(opts));
 
   drawCover(r, {
-    kicker: "Reporte de piso",
+    kicker: opts.project?.project_name || "Reporte de piso",
     title: floorName,
     subtitle: `${spaces.length} espacios · ${points.length} puntos · Generado el ${formatToday()}`,
   });
@@ -604,14 +663,14 @@ export async function buildFloorDoc(floor, spaces, points) {
   return doc;
 }
 
-export async function buildProjectDoc(floors, spaces, points) {
+export async function buildProjectDoc(floors, spaces, points, opts = {}) {
   const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const r = createReport(doc, "NetTrack Pro · Reporte de proyecto");
+  const r = createReport(doc, "NetTrack Pro · Reporte de proyecto", await reportMeta(opts));
 
   drawCover(r, {
     kicker: "Reporte de proyecto",
-    title: "Instalación de red",
+    title: opts.project?.project_name || "Instalación de red",
     subtitle: `${floors.length} pisos · ${spaces.length} espacios · ${points.length} puntos · Generado el ${formatToday()}`,
   });
   const stats = computeStats(points);
@@ -637,10 +696,10 @@ export async function buildProjectDoc(floors, spaces, points) {
 }
 
 // Single point: just its sheet, for the checklist view's export button.
-export async function buildPointDoc(point, floor, space) {
+export async function buildPointDoc(point, floor, space, opts = {}) {
   const jsPDF = await loadJsPDF();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const r = createReport(doc, `NetTrack Pro · Punto ${point?.name || ""}`);
+  const r = createReport(doc, `NetTrack Pro · Punto ${point?.name || ""}`, await reportMeta(opts));
   await drawPointSheet(r, point, {
     floorName: floor?.name || "—",
     spaceName: space?.name || "—",
@@ -649,17 +708,17 @@ export async function buildPointDoc(point, floor, space) {
   return doc;
 }
 
-export async function exportFloorPdf(floor, spaces, points) {
-  const doc = await buildFloorDoc(floor, spaces, points);
+export async function exportFloorPdf(floor, spaces, points, opts = {}) {
+  const doc = await buildFloorDoc(floor, spaces, points, opts);
   doc.save(`piso-${(floor?.name || "piso").replace(/\s+/g, "-")}.pdf`);
 }
 
-export async function exportProjectPdf(floors, spaces, points) {
-  const doc = await buildProjectDoc(floors, spaces, points);
-  doc.save(`proyecto-nettrack-${new Date().toISOString().slice(0, 10)}.pdf`);
+export async function exportProjectPdf(floors, spaces, points, opts = {}) {
+  const doc = await buildProjectDoc(floors, spaces, points, opts);
+  doc.save(`proyecto-${(opts.project?.project_name || "nettrack").replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
-export async function exportPointPdf(point, floor, space) {
-  const doc = await buildPointDoc(point, floor, space);
+export async function exportPointPdf(point, floor, space, opts = {}) {
+  const doc = await buildPointDoc(point, floor, space, opts);
   doc.save(`punto-${(point?.name || "punto").replace(/\s+/g, "-")}.pdf`);
 }

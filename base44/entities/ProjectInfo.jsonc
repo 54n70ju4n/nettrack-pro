@@ -12,16 +12,55 @@
     },
     "address": {
       "type": "string",
-      "description": "Direcci\u00f3n del proyecto"
+      "description": "Dirección del proyecto"
+    },
+    "city": {
+      "type": "string",
+      "description": "Ciudad / ubicación"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL o sitio del proyecto"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Teléfono de contacto"
+    },
+    "email": {
+      "type": "string",
+      "description": "Correo de contacto"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Persona de contacto"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL del logo/imagen del proyecto"
     },
     "start_date": {
       "type": "string",
       "format": "date",
       "description": "Fecha de inicio"
     },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de finalización estimada"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "activo",
+        "en_pausa",
+        "finalizado"
+      ],
+      "default": "activo",
+      "description": "Estado del proyecto"
+    },
     "description": {
       "type": "string",
-      "description": "Descripci\u00f3n general del proyecto"
+      "description": "Descripción general del proyecto"
     }
   },
   "required": [

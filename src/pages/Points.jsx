@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
-import { usePoints, useFloors, useSpaces, useInvalidateData } from "@/lib/queries";
+import { useInvalidateData } from "@/lib/queries";
+import { useScopedData } from "@/lib/ProjectContext";
 import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,14 +20,7 @@ import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress, getPointPhaseProgress, hasObservations } from "@/lib/pointProgress";
 
 export default function Points() {
-  const pointsQ = usePoints();
-  const floorsQ = useFloors();
-  const spacesQ = useSpaces();
-  const points = pointsQ.data ?? [];
-  const floors = floorsQ.data ?? [];
-  const spaces = spacesQ.data ?? [];
-  const loading = pointsQ.isLoading || floorsQ.isLoading || spacesQ.isLoading;
-  const isError = pointsQ.isError || floorsQ.isError || spacesQ.isError;
+  const { floors, spaces, points, isLoading: loading, isError } = useScopedData();
   const invalidate = useInvalidateData();
   const run = useAction();
   const [search, setSearch] = useState("");

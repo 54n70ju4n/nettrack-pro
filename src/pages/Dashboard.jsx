@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { usePoints, useFloors, useSpaces, useTemplates } from "@/lib/queries";
+import { useTemplates } from "@/lib/queries";
+import { useScopedData } from "@/lib/ProjectContext";
 import StatusPieChart from "@/components/dashboard/StatusPieChart";
 import ProgressRing from "@/components/shared/ProgressRing";
 import ProgressBar from "@/components/shared/ProgressBar";
@@ -28,11 +29,8 @@ function isPointMissing(point, fieldKey) {
 }
 
 export default function Dashboard() {
-  const { data: points = [], isLoading: loadingPoints } = usePoints();
-  const { data: floors = [], isLoading: loadingFloors } = useFloors();
-  const { data: spaces = [], isLoading: loadingSpaces } = useSpaces();
+  const { floors, spaces, points, isLoading: loading } = useScopedData();
   const { data: templates = [] } = useTemplates();
-  const loading = loadingPoints || loadingFloors || loadingSpaces;
   const [filterFloor, setFilterFloor] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterTech, setFilterTech] = useState("all");

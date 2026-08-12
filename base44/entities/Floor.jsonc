@@ -4,11 +4,27 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "Nombre del piso (ej: Semis\u00f3tano, Piso 1)"
+      "description": "Nombre del piso (ej: Semisótano, Piso 1)"
+    },
+    "project_id": {
+      "type": "string",
+      "description": "ID del proyecto al que pertenece el piso"
     },
     "order": {
       "type": "number",
-      "description": "Orden de visualizaci\u00f3n"
+      "description": "Orden de visualización"
+    },
+    "width": {
+      "type": "number",
+      "description": "Ancho del piso (metros) — usado en Fase 2 para el plano"
+    },
+    "length": {
+      "type": "number",
+      "description": "Largo del piso (metros) — usado en Fase 2 para el plano"
+    },
+    "plan_url": {
+      "type": "string",
+      "description": "URL de la imagen del plano del piso (Fase 2)"
     }
   },
   "required": [

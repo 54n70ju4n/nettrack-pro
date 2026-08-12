@@ -1,9 +1,12 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, Settings, X, Network, ClipboardList, Tag } from "lucide-react";
+import { LayoutDashboard, Building2, Settings, X, Network, ClipboardList, Tag, FolderKanban } from "lucide-react";
+import { useProject } from "@/lib/ProjectContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
+  { label: "Proyectos", path: "/proyectos", icon: FolderKanban },
   { label: "Pisos", path: "/pisos", icon: Building2 },
   { label: "Puntos", path: "/puntos", icon: Network },
   { label: "Rótulos", path: "/rotulos", icon: Tag },
@@ -13,6 +16,7 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
+  const { projects, activeProjectId, setActiveProjectId, hasProjects } = useProject();
 
   return (
     <>
@@ -34,6 +38,23 @@ export default function Sidebar({ open, onClose }) {
           <button className="lg:hidden p-1" onClick={onClose}>
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Active project switcher */}
+        <div className="px-3 pt-3">
+          <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-1">Proyecto</label>
+          {hasProjects ? (
+            <Select value={activeProjectId || ""} onValueChange={setActiveProjectId}>
+              <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Seleccionar proyecto" /></SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.project_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Link to="/proyectos" onClick={onClose} className="mt-1 flex items-center justify-center gap-1.5 h-9 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground">
+              <FolderKanban className="w-3.5 h-3.5" /> Crear proyecto
+            </Link>
+          )}
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">

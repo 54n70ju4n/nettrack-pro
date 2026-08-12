@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { usePoints, useFloors, useSpaces, useLabelTemplates, useTemplates, useInvalidateData } from "@/lib/queries";
+import { useLabelTemplates, useTemplates, useInvalidateData } from "@/lib/queries";
+import { useScopedData } from "@/lib/ProjectContext";
 import { getTemplate } from "@/lib/checklistTemplates";
 import { useAction } from "@/lib/useAction";
 import { useToast } from "@/components/ui/use-toast";
@@ -156,18 +157,11 @@ function SheetPreview({ config, points, maps }) {
 // --- Page --------------------------------------------------------------------
 
 export default function Labels() {
-  const pointsQ = usePoints();
-  const floorsQ = useFloors();
-  const spacesQ = useSpaces();
+  const { floors, spaces, points, isLoading: loading, isError } = useScopedData();
   const labelTemplatesQ = useLabelTemplates();
   const templatesQ = useTemplates();
-  const points = pointsQ.data ?? [];
-  const floors = floorsQ.data ?? [];
-  const spaces = spacesQ.data ?? [];
   const labelTemplates = labelTemplatesQ.data ?? [];
   const templates = templatesQ.data ?? [];
-  const loading = pointsQ.isLoading || floorsQ.isLoading || spacesQ.isLoading;
-  const isError = pointsQ.isError || floorsQ.isError || spacesQ.isError;
   const invalidate = useInvalidateData();
   const run = useAction();
   const { toast } = useToast();

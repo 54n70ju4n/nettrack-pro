@@ -23,6 +23,8 @@ import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress, getPointPhaseProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
 import { sortItems, parseOrder, formatOrder } from "@/lib/ordering";
 import { exportFloorPdf } from "@/lib/exportFloorPdf";
+import { useProject } from "@/lib/ProjectContext";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function FloorDetail() {
   const { floorId } = useParams();
@@ -39,6 +41,8 @@ export default function FloorDetail() {
   const isError = floorQ.isError || spacesQ.isError || pointsQ.isError;
   const invalidate = useInvalidateData();
   const run = useAction();
+  const { activeProject } = useProject();
+  const { user } = useAuth();
   const [spaceDialog, setSpaceDialog] = useState(false);
   const [pointDialog, setPointDialog] = useState(false);
   const [spaceName, setSpaceName] = useState("");
@@ -60,7 +64,7 @@ export default function FloorDetail() {
   const [pointToDelete, setPointToDelete] = useState(null);
   const [sortMode, setSortMode] = useState("manual");
 
-  const exportPdf = () => run(() => exportFloorPdf(floor, sortedSpaces, points));
+  const exportPdf = () => run(() => exportFloorPdf(floor, sortedSpaces, points, { project: activeProject, user }));
 
   const saveFloorName = () => run(async () => {
     if (!floorEditVal.trim()) return;

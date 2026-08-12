@@ -5,6 +5,7 @@ import { setCachedTemplates } from "@/lib/checklistTemplates";
 // Centralized query keys. Invalidating a prefix (e.g. ["points"]) also
 // invalidates the derived keys below it (["points", "byFloor", id]).
 export const qk = {
+  projects: ["projects"],
   floors: ["floors"],
   spaces: ["spaces"],
   points: ["points"],
@@ -17,6 +18,10 @@ export const qk = {
 };
 
 // --- List queries ---
+export function useProjects() {
+  return useQuery({ queryKey: qk.projects, queryFn: () => base44.entities.ProjectInfo.list("-created_date", 200) });
+}
+
 export function useFloors() {
   return useQuery({ queryKey: qk.floors, queryFn: () => base44.entities.Floor.list("order", 100) });
 }
@@ -86,7 +91,7 @@ export function usePointsByFloor(floorId) {
 export function useInvalidateData() {
   const qc = useQueryClient();
   return () => {
-    for (const key of [["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"], ["labelTemplates"], ["technicians"], ["users"]]) {
+    for (const key of [["projects"], ["floors"], ["spaces"], ["points"], ["floor"], ["space"], ["point"], ["templates"], ["labelTemplates"], ["technicians"], ["users"]]) {
       qc.invalidateQueries({ queryKey: key });
     }
   };
