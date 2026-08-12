@@ -15,7 +15,9 @@ import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { FolderKanban, Plus, Loader2, Save, Pencil, Trash2, Check, Building2, ImageIcon, X, MapPin, Link2, Phone, Mail, User } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FolderKanban, Plus, Loader2, Save, Pencil, Trash2, Check, Building2, ImageIcon, X, MapPin, Link2, Phone, Mail, User, Palette } from "lucide-react";
+import { TOGGLEABLE_MODULES, TERM_FIELDS } from "@/lib/branding";
 
 const STATUS = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700" },
@@ -27,6 +29,7 @@ const EMPTY = {
   project_name: "", client: "", status: "activo", address: "", city: "",
   url: "", phone: "", email: "", contact_name: "", logo_url: "",
   start_date: "", end_date: "", description: "",
+  primary_color: "", hidden_modules: [], terminology: {},
 };
 
 export default function Projects() {
@@ -51,6 +54,12 @@ export default function Projects() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const toggleModule = (key) => set({
+    hidden_modules: form.hidden_modules.includes(key)
+      ? form.hidden_modules.filter((k) => k !== key)
+      : [...form.hidden_modules, key],
+  });
+  const setTerm = (key, val) => set({ terminology: { ...form.terminology, [key]: val } });
 
   const floorCounts = useMemo(() => {
     const map = {};
@@ -257,6 +266,41 @@ export default function Projects() {
               <div className="sm:col-span-2">
                 <Label className="text-xs mb-1.5 block">Descripción</Label>
                 <Textarea value={form.description} onChange={(e) => set({ description: e.target.value })} rows={2} />
+              </div>
+            </div>
+
+            {/* Personalización */}
+            <div className="border-t border-border pt-4 space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Personalización</p>
+
+              <div>
+                <Label className="text-xs mb-1.5 block flex items-center gap-1"><Palette className="w-3 h-3" /> Color de marca</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={form.primary_color || "#1d4ed8"} onChange={(e) => set({ primary_color: e.target.value })} className="h-9 w-10 rounded-md border border-border cursor-pointer bg-white p-0.5" />
+                  <Input value={form.primary_color} onChange={(e) => set({ primary_color: e.target.value })} placeholder="#1d4ed8" className="h-9 font-mono text-xs w-32" />
+                  {form.primary_color && <button onClick={() => set({ primary_color: "" })} className="text-xs text-muted-foreground hover:text-foreground">Restablecer</button>}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs mb-1.5 block">Módulos visibles</Label>
+                <div className="flex flex-wrap gap-4">
+                  {TOGGLEABLE_MODULES.map((m) => (
+                    <label key={m.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox checked={!form.hidden_modules.includes(m.key)} onCheckedChange={() => toggleModule(m.key)} />
+                      {m.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs mb-1.5 block">Terminología (renombrar etiquetas)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {TERM_FIELDS.map((t) => (
+                    <Input key={t.key} value={form.terminology[t.key] || ""} onChange={(e) => setTerm(t.key, e.target.value)} placeholder={t.label} className="h-8 text-sm" />
+                  ))}
+                </div>
               </div>
             </div>
           </div>

@@ -1,22 +1,25 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Building2, Settings, X, Network, ClipboardList, Tag, FolderKanban } from "lucide-react";
-import { useProject } from "@/lib/ProjectContext";
+import { useProject, useTerms } from "@/lib/ProjectContext";
+import { isModuleHidden } from "@/lib/branding";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
-  { label: "Proyectos", path: "/proyectos", icon: FolderKanban },
-  { label: "Pisos", path: "/pisos", icon: Building2 },
-  { label: "Puntos", path: "/puntos", icon: Network },
-  { label: "Rótulos", path: "/rotulos", icon: Tag },
-  { label: "Plantillas", path: "/plantillas", icon: ClipboardList },
+  { label: "Proyectos", path: "/proyectos", icon: FolderKanban, termKey: "projects" },
+  { label: "Pisos", path: "/pisos", icon: Building2, termKey: "floors" },
+  { label: "Puntos", path: "/puntos", icon: Network, module: "puntos", termKey: "points" },
+  { label: "Rótulos", path: "/rotulos", icon: Tag, module: "rotulos" },
+  { label: "Plantillas", path: "/plantillas", icon: ClipboardList, module: "plantillas" },
   { label: "Configuración", path: "/configuracion", icon: Settings },
 ];
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
-  const { projects, activeProjectId, setActiveProjectId, hasProjects } = useProject();
+  const { projects, activeProject, activeProjectId, setActiveProjectId, hasProjects } = useProject();
+  const terms = useTerms();
+  const items = navItems.filter((it) => !it.module || !isModuleHidden(activeProject, it.module));
 
   return (
     <>
@@ -58,7 +61,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -72,7 +75,7 @@ export default function Sidebar({ open, onClose }) {
                 }`}
               >
                 <item.icon className="w-4.5 h-4.5" />
-                {item.label}
+                {item.termKey ? terms[item.termKey] : item.label}
               </Link>
             );
           })}

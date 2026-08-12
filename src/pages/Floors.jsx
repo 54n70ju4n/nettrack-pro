@@ -11,7 +11,7 @@ import {
 import { Building2, Plus, ChevronRight, Loader2, Trash2, Pencil, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { getPointProgress } from "@/lib/pointProgress";
 import { useInvalidateData } from "@/lib/queries";
-import { useScopedData, useProject } from "@/lib/ProjectContext";
+import { useScopedData, useProject, useTerms } from "@/lib/ProjectContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useAction } from "@/lib/useAction";
 import { exportProjectPdf } from "@/lib/exportFloorPdf";
@@ -20,6 +20,7 @@ import DataError from "@/components/shared/DataError";
 export default function Floors() {
   const { floors, spaces, points, isLoading: loading, isError } = useScopedData();
   const { activeProjectId, activeProject } = useProject();
+  const terms = useTerms();
   const { user } = useAuth();
   const invalidate = useInvalidateData();
   const run = useAction();
@@ -80,7 +81,7 @@ export default function Floors() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Pisos</h1>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">{terms.floors}</h1>
           <p className="text-muted-foreground text-sm mt-1">{activeProject ? activeProject.project_name : "Estructura del edificio"}</p>
         </div>
         <div className="flex w-full sm:w-auto flex-wrap gap-2">

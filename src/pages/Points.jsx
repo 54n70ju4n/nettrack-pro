@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { useInvalidateData } from "@/lib/queries";
-import { useScopedData } from "@/lib/ProjectContext";
+import { useScopedData, useTerms } from "@/lib/ProjectContext";
 import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ import { getPointProgress, getPointPhaseProgress, hasObservations } from "@/lib/
 
 export default function Points() {
   const { floors, spaces, points, isLoading: loading, isError } = useScopedData();
+  const terms = useTerms();
   const invalidate = useInvalidateData();
   const run = useAction();
   const [search, setSearch] = useState("");
@@ -101,8 +102,8 @@ export default function Points() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-heading font-bold tracking-tight">Puntos de instalación</h1>
-        <p className="text-muted-foreground text-sm mt-1">{filtered.length} de {points.length} puntos</p>
+        <h1 className="text-2xl font-heading font-bold tracking-tight">{terms.points} de instalación</h1>
+        <p className="text-muted-foreground text-sm mt-1">{filtered.length} de {points.length} {terms.points.toLowerCase()}</p>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">

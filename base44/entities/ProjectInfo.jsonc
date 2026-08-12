@@ -61,6 +61,24 @@
     "description": {
       "type": "string",
       "description": "Descripción general del proyecto"
+    },
+    "primary_color": {
+      "type": "string",
+      "description": "Color de marca (hex) aplicado a la app y al PDF de este proyecto"
+    },
+    "hidden_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Módulos ocultos para este proyecto (ej: puntos, rotulos, plantillas)"
+    },
+    "terminology": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Renombres de terminología {clave: etiqueta} (ej: {point: 'Nodo'})"
     }
   },
   "required": [

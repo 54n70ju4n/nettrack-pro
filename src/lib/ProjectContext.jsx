@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useProjects, useFloors, useSpaces, usePoints, useInvalidateData } from "@/lib/queries";
+import { applyBrandColor, resolveTerms } from "@/lib/branding";
 
 const ProjectContext = createContext(null);
 const STORAGE_KEY = "nettrack.activeProjectId";
@@ -72,6 +73,11 @@ export function ProjectProvider({ children }) {
     [projects, activeProjectId]
   );
 
+  // Apply the active project's brand color to the app's CSS variables.
+  useEffect(() => {
+    applyBrandColor(activeProject?.primary_color);
+  }, [activeProject?.primary_color]);
+
   const value = useMemo(() => ({
     projects,
     activeProjectId,
@@ -88,6 +94,12 @@ export function useProject() {
   const ctx = useContext(ProjectContext);
   if (!ctx) throw new Error("useProject must be used within a ProjectProvider");
   return ctx;
+}
+
+// Resolved terminology (defaults merged with the active project's overrides).
+export function useTerms() {
+  const { activeProject } = useProject();
+  return useMemo(() => resolveTerms(activeProject), [activeProject]);
 }
 
 // Floors/spaces/points scoped to the active project. Floors carry project_id;
