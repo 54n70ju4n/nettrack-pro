@@ -18,6 +18,7 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import PhaseChips from "@/components/shared/PhaseChips";
 import PointEditDialog from "@/components/shared/PointEditDialog";
+import FloorPlanSection from "@/components/floorplan/FloorPlanSection";
 import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download, ArrowDownUp } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress, getPointPhaseProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
@@ -159,6 +160,8 @@ export default function FloorDetail() {
           <Button onClick={() => setPointDialog(true)} size="sm" className="flex-1 sm:flex-none"><Plus className="w-4 h-4 mr-1.5" /> Punto</Button>
         </div>
       </div>
+
+      {floor && <FloorPlanSection floor={floor} points={points} />}
 
       {spaces.length === 0 ? (
         <div className="bg-white rounded-xl border border-border p-12 text-center">

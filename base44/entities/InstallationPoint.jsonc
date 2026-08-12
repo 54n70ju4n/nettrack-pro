@@ -43,6 +43,14 @@
       "type": "number",
       "default": 0
     },
+    "plan_x": {
+      "type": "number",
+      "description": "Posición X del pin en el plano del piso (porcentaje 0-100)"
+    },
+    "plan_y": {
+      "type": "number",
+      "description": "Posición Y del pin en el plano del piso (porcentaje 0-100)"
+    },
     "act_perforacion": {
       "type": "boolean",
       "default": false
