@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, Link } from "react-router-dom";
-import { useFloor, useSpacesByFloor, usePointsByFloor, useInvalidateData } from "@/lib/queries";
+import { useFloor, useFloors, useSpaces, useSpacesByFloor, usePointsByFloor, useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import PhaseChips from "@/components/shared/PhaseChips";
+import PointEditDialog from "@/components/shared/PointEditDialog";
 import { ArrowLeft, Plus, Loader2, Trash2, ChevronRight, Pencil, Download, ArrowDownUp } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress, getPointPhaseProgress, aggregatePhaseProgress } from "@/lib/pointProgress";
@@ -28,6 +29,9 @@ export default function FloorDetail() {
   const floorQ = useFloor(floorId);
   const spacesQ = useSpacesByFloor(floorId);
   const pointsQ = usePointsByFloor(floorId);
+  // Whole-building lists, so a point can be moved to a space on another floor.
+  const allFloorsQ = useFloors();
+  const allSpacesQ = useSpaces();
   const floor = floorQ.data;
   const spaces = spacesQ.data ?? [];
   const points = pointsQ.data ?? [];
@@ -51,10 +55,6 @@ export default function FloorDetail() {
   const [editSpaceName, setEditSpaceName] = useState("");
   const [editSpaceOrder, setEditSpaceOrder] = useState("");
   const [editPoint, setEditPoint] = useState(null);
-  const [editPointName, setEditPointName] = useState("");
-  const [editPointType, setEditPointType] = useState("ethernet");
-  const [editPointDesc, setEditPointDesc] = useState("");
-  const [editPointOrder, setEditPointOrder] = useState("");
   const [editSpaceType, setEditSpaceType] = useState("habitacion");
   const [spaceToDelete, setSpaceToDelete] = useState(null);
   const [pointToDelete, setPointToDelete] = useState(null);
@@ -78,29 +78,11 @@ export default function FloorDetail() {
     invalidate();
   });
 
-  const saveEditPoint = () => run(async () => {
-    if (!editPointName.trim()) return;
-    await base44.entities.InstallationPoint.update(editPoint.id, {
-      name: editPointName.trim(), device_type: editPointType,
-      description: editPointDesc.trim(), order: parseOrder(editPointOrder),
-    });
-    setEditPoint(null);
-    invalidate();
-  });
-
   const openEditSpace = (s) => {
     setEditSpace(s);
     setEditSpaceName(s.name);
     setEditSpaceType(s.space_type || "habitacion");
     setEditSpaceOrder(formatOrder(s.order));
-  };
-
-  const openEditPoint = (pt) => {
-    setEditPoint(pt);
-    setEditPointName(pt.name);
-    setEditPointType(pt.device_type);
-    setEditPointDesc(pt.description || "");
-    setEditPointOrder(formatOrder(pt.order));
   };
 
   const sortedSpaces = useMemo(() => sortItems(spaces, sortMode), [spaces, sortMode]);
@@ -261,7 +243,8 @@ export default function FloorDetail() {
                           <PhaseChips phases={phases} className="mt-1.5" />
                         </div>
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditPoint(pt); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); }}
+                          title="Editar o mover punto"
                           className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -377,32 +360,13 @@ export default function FloorDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Point */}
-      <Dialog open={!!editPoint} onOpenChange={(open) => { if (!open) setEditPoint(null); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Editar punto</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <Input value={editPointName} onChange={(e) => setEditPointName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditPoint()} />
-            <Select value={editPointType} onValueChange={setEditPointType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ethernet">Ethernet</SelectItem>
-                <SelectItem value="camara">Cámara CCTV</SelectItem>
-                <SelectItem value="access_point">AP WiFi</SelectItem>
-              </SelectContent>
-            </Select>
-            <div>
-              <Label className="text-xs mb-1.5 block">Descripción (opcional)</Label>
-              <Textarea placeholder="Ubicación, referencia, detalles..." value={editPointDesc} onChange={(e) => setEditPointDesc(e.target.value)} rows={2} />
-            </div>
-            <div>
-              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
-              <Input placeholder="Ej: 1 o 1.2" value={editPointOrder} onChange={(e) => setEditPointOrder(e.target.value)} inputMode="decimal" />
-            </div>
-            <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit / move point */}
+      <PointEditDialog
+        point={editPoint}
+        floors={allFloorsQ.data ?? []}
+        spaces={allSpacesQ.data ?? []}
+        onClose={() => setEditPoint(null)}
+      />
 
       {/* Delete Space Confirmation */}
       <AlertDialog open={!!spaceToDelete} onOpenChange={(open) => { if (!open) setSpaceToDelete(null); }}>

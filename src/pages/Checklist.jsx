@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import ProgressBar from "@/components/shared/ProgressBar";
-import { ArrowLeft, Loader2, Save, Camera, X } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Camera, X, Download } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { getTemplate, FIELD_LABELS } from "@/lib/checklistTemplates";
 import { getPointPhaseProgress, getEquipmentFieldPhase } from "@/lib/pointProgress";
-import { usePoint, useFloor, useSpace, useTechnicians, useInvalidateData } from "@/lib/queries";
+import { usePoint, useFloors, useSpaces, useTechnicians, useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
+import { exportPointPdf } from "@/lib/exportFloorPdf";
+import { sortItems } from "@/lib/ordering";
 import DataError from "@/components/shared/DataError";
 
 export default function Checklist() {
@@ -25,15 +27,33 @@ export default function Checklist() {
   const invalidate = useInvalidateData();
   const run = useAction();
   const { data: point, isLoading, isError } = usePoint(pointId);
-  const { data: floor } = useFloor(point?.floor_id);
-  const { data: space } = useSpace(point?.space_id);
+  const { data: floors = [] } = useFloors();
+  const { data: spaces = [] } = useSpaces();
   const { data: technicians = [] } = useTechnicians();
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [form, setForm] = useState(null);
 
   useEffect(() => { if (point) setForm(point); }, [point]);
 
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Location is read off the edited form, so the header and the export reflect
+  // a pending move before it is saved.
+  const sortedFloors = useMemo(() => [...floors].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [floors]);
+  const floorSpaces = useMemo(
+    () => sortItems(spaces.filter((s) => s.floor_id === form?.floor_id), "manual"),
+    [spaces, form?.floor_id]
+  );
+  const floor = useMemo(() => floors.find((f) => f.id === form?.floor_id), [floors, form?.floor_id]);
+  const space = useMemo(() => spaces.find((s) => s.id === form?.space_id), [spaces, form?.space_id]);
+
+  // Moving the point: a space belongs to one floor, so switching floor also
+  // re-points space_id at that floor's first space.
+  const changeFloor = (floorId) => {
+    const first = sortItems(spaces.filter((s) => s.floor_id === floorId), "manual")[0];
+    setForm((prev) => ({ ...prev, floor_id: floorId, space_id: first?.id || "" }));
+  };
 
   const save = async () => {
     setSaving(true);
@@ -48,6 +68,12 @@ export default function Checklist() {
       toast({ title: "Guardado", description: "Los cambios se guardaron correctamente." });
       navigate(-1);
     }
+  };
+
+  const exportPdf = async () => {
+    setExporting(true);
+    await run(() => exportPointPdf(form, floor, space), "No se pudo exportar el PDF");
+    setExporting(false);
   };
 
   const uploadPhoto = (e) => run(async () => {
@@ -79,19 +105,52 @@ export default function Checklist() {
         <Link to={`/pisos/${point.floor_id}`} className="p-2 rounded-lg hover:bg-muted">
           <ArrowLeft className="w-4 h-4" />
         </Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <DeviceIcon type={form.device_type} />
-            <h1 className="text-xl font-heading font-bold tracking-tight">{form.name}</h1>
+            <h1 className="text-xl font-heading font-bold tracking-tight truncate">{form.name}</h1>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{floor?.name} · {space?.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{floor?.name || "—"} · {space?.name || "—"}</p>
         </div>
-        <StatusBadge status={form.status} />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <StatusBadge status={form.status} />
+          <Button
+            onClick={exportPdf}
+            disabled={exporting}
+            size="sm"
+            variant="outline"
+            title="Exportar este punto a PDF"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="sr-only sm:not-sr-only sm:ml-1.5">PDF</span>
+          </Button>
+        </div>
       </div>
 
       {/* Status & Template info */}
       <Section title="General">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs mb-1.5 block">Piso</Label>
+            <Select value={form.floor_id || ""} onValueChange={changeFloor}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar piso" /></SelectTrigger>
+              <SelectContent>
+                {sortedFloors.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs mb-1.5 block">Espacio</Label>
+            <Select value={form.space_id || ""} onValueChange={(v) => update("space_id", v)} disabled={floorSpaces.length === 0}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar espacio" /></SelectTrigger>
+              <SelectContent>
+                {floorSpaces.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {floorSpaces.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1.5">Este piso no tiene espacios.</p>
+            )}
+          </div>
           <div>
             <Label className="text-xs mb-1.5 block">Estado</Label>
             <Select value={form.status} onValueChange={(v) => update("status", v)}>
@@ -245,7 +304,7 @@ export default function Checklist() {
 
       {/* Save */}
       <div className="sticky bottom-4">
-        <Button onClick={save} disabled={saving} className="w-full shadow-lg">
+        <Button onClick={save} disabled={saving || !form.space_id} className="w-full shadow-lg">
           {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
           Guardar cambios
         </Button>

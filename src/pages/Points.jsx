@@ -6,10 +6,6 @@ import { useAction } from "@/lib/useAction";
 import DataError from "@/components/shared/DataError";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
@@ -17,10 +13,10 @@ import {
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeviceIcon from "@/components/shared/DeviceIcon";
 import PhaseChips from "@/components/shared/PhaseChips";
+import PointEditDialog from "@/components/shared/PointEditDialog";
 import { Loader2, Search, ChevronRight, Pencil, Trash2, ArrowUp, ArrowDown, ChevronsUpDown, MessageSquareText } from "lucide-react";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { getPointProgress, getPointPhaseProgress, hasObservations } from "@/lib/pointProgress";
-import { parseOrder, formatOrder } from "@/lib/ordering";
 
 export default function Points() {
   const pointsQ = usePoints();
@@ -39,10 +35,6 @@ export default function Points() {
   const [filterType, setFilterType] = useState("all");
   const [filterTech, setFilterTech] = useState("all");
   const [editPoint, setEditPoint] = useState(null);
-  const [editPointName, setEditPointName] = useState("");
-  const [editPointType, setEditPointType] = useState("ethernet");
-  const [editPointDesc, setEditPointDesc] = useState("");
-  const [editPointOrder, setEditPointOrder] = useState("");
   const [pointToDelete, setPointToDelete] = useState(null);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -59,24 +51,6 @@ export default function Points() {
   const SortIcon = ({ k }) => {
     if (sortKey !== k) return <ChevronsUpDown className="w-3 h-3 opacity-40" />;
     return sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />;
-  };
-
-  const saveEditPoint = () => run(async () => {
-    if (!editPointName.trim()) return;
-    await base44.entities.InstallationPoint.update(editPoint.id, {
-      name: editPointName.trim(), device_type: editPointType,
-      description: editPointDesc.trim(), order: parseOrder(editPointOrder),
-    });
-    setEditPoint(null);
-    invalidate();
-  });
-
-  const openEditPoint = (pt) => {
-    setEditPoint(pt);
-    setEditPointName(pt.name);
-    setEditPointType(pt.device_type);
-    setEditPointDesc(pt.description || "");
-    setEditPointOrder(formatOrder(pt.order));
   };
 
   const confirmDeletePoint = () => run(async () => {
@@ -218,7 +192,8 @@ export default function Points() {
                   </div>
                   <div className="col-span-1 flex items-center justify-end gap-1">
                     <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditPoint(pt); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPoint(pt); }}
+                      title="Editar o mover punto"
                       className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -241,31 +216,7 @@ export default function Points() {
         </div>
       </div>
 
-      <Dialog open={!!editPoint} onOpenChange={(open) => { if (!open) setEditPoint(null); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Editar punto</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <Input value={editPointName} onChange={(e) => setEditPointName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEditPoint()} />
-            <Select value={editPointType} onValueChange={setEditPointType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ethernet">Ethernet</SelectItem>
-                <SelectItem value="camara">Cámara CCTV</SelectItem>
-                <SelectItem value="access_point">AP WiFi</SelectItem>
-              </SelectContent>
-            </Select>
-            <div>
-              <Label className="text-xs mb-1.5 block">Descripción (opcional)</Label>
-              <Textarea placeholder="Ubicación, referencia, detalles..." value={editPointDesc} onChange={(e) => setEditPointDesc(e.target.value)} rows={2} />
-            </div>
-            <div>
-              <Label className="text-xs mb-1.5 block">Orden (opcional)</Label>
-              <Input placeholder="Ej: 1 o 1.2" value={editPointOrder} onChange={(e) => setEditPointOrder(e.target.value)} inputMode="decimal" />
-            </div>
-            <Button onClick={saveEditPoint} className="w-full">Guardar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PointEditDialog point={editPoint} floors={floors} spaces={spaces} onClose={() => setEditPoint(null)} />
 
       <AlertDialog open={!!pointToDelete} onOpenChange={(open) => { if (!open) setPointToDelete(null); }}>
         <AlertDialogContent className="sm:max-w-sm">
