@@ -35,6 +35,50 @@ export function applyBrandColor(hex) {
   else root.style.removeProperty("--primary");
 }
 
+// Converts a hex color to `rgba(...)` with the given alpha (0-1).
+export function hexToRgba(hex, alpha = 1) {
+  let h = String(hex || "").replace("#", "").trim();
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return `rgba(100, 116, 139, ${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// --- Floor-plan pins -------------------------------------------------------
+
+// Default pin palette: the app's status colors.
+export const PIN_STATUS_COLORS = {
+  pendiente: "#94a3b8",
+  en_proceso: "#f59e0b",
+  finalizado: "#22c55e",
+  con_observaciones: "#ef4444",
+};
+
+export const DEFAULT_PIN_OPACITY = 100;
+
+export function isHexColor(value) {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
+}
+
+export function normalizePinOpacity(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : DEFAULT_PIN_OPACITY;
+}
+
+// How a plan pin should be painted for a given point: the project's fixed color
+// when one is set, otherwise the point's status color. The fill honours the
+// project's opacity, so pins can be translucent or fully transparent (contour
+// only) to avoid hiding the drawing underneath.
+export function resolvePinStyle(project, status) {
+  const color = isHexColor(project?.pin_color)
+    ? project.pin_color.trim()
+    : (PIN_STATUS_COLORS[status] || PIN_STATUS_COLORS.pendiente);
+  const opacity = normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY);
+  return { color, opacity, fill: hexToRgba(color, opacity / 100) };
+}
+
 // --- Terminology -----------------------------------------------------------
 
 export const DEFAULT_TERMS = {

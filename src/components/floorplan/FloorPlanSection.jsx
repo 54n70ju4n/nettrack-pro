@@ -1,32 +1,49 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
+import { useProject } from "@/lib/ProjectContext";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Map, Upload, Loader2, X, Ruler } from "lucide-react";
-
-// Pin colours mirror the app's status palette.
-const STATUS_HEX = {
-  pendiente: "#94a3b8",
-  en_proceso: "#f59e0b",
-  finalizado: "#22c55e",
-  con_observaciones: "#ef4444",
-};
+import { Map, Upload, Loader2, X, Ruler, Palette } from "lucide-react";
+import PinStyleDialog from "@/components/floorplan/PinStyleDialog";
+import { resolvePinStyle } from "@/lib/branding";
 
 const isPlaced = (p) => Number.isFinite(p.plan_x) && Number.isFinite(p.plan_y);
+
+// Accepts "12,5" as well as "12.5". Empty or invalid input clears the value,
+// stored as 0 because the entity field is a plain number.
+const parseMeters = (value) => {
+  const n = parseFloat(String(value ?? "").replace(",", ".").trim());
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+};
 
 export default function FloorPlanSection({ floor, points }) {
   const navigate = useNavigate();
   const invalidate = useInvalidateData();
   const run = useAction();
+  const { toast } = useToast();
+  const { activeProject } = useProject();
   const containerRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [savingDims, setSavingDims] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
   const [placingId, setPlacingId] = useState(null);
   const [drag, setDrag] = useState(null); // { id, x, y, moved, startX, startY }
-  const [w, setW] = useState(floor.width ?? "");
-  const [l, setL] = useState(floor.length ?? "");
+  const [w, setW] = useState(floor.width ? String(floor.width) : "");
+  const [l, setL] = useState(floor.length ? String(floor.length) : "");
+
+  // Re-sync the inputs when the stored dimensions change (save, floor switch).
+  useEffect(() => {
+    setW(floor.width ? String(floor.width) : "");
+    setL(floor.length ? String(floor.length) : "");
+  }, [floor.id, floor.width, floor.length]);
+
+  const savedW = floor.width || 0;
+  const savedL = floor.length || 0;
+  const dimsDirty = parseMeters(w) !== savedW || parseMeters(l) !== savedL;
 
   const placed = points.filter(isPlaced);
   const unplaced = points.filter((p) => !isPlaced(p));
@@ -50,13 +67,22 @@ export default function FloorPlanSection({ floor, points }) {
     invalidate();
   });
 
-  const saveDimensions = () => run(async () => {
-    await base44.entities.Floor.update(floor.id, {
-      width: w === "" ? null : Number(w),
-      length: l === "" ? null : Number(l),
+  const saveDimensions = async () => {
+    const width = parseMeters(w);
+    const length = parseMeters(l);
+    setSavingDims(true);
+    const ok = await run(async () => {
+      await base44.entities.Floor.update(floor.id, { width, length });
+      return true;
+    }, "No se pudieron guardar las medidas");
+    setSavingDims(false);
+    if (!ok) return;
+    toast({
+      title: "Medidas guardadas",
+      description: width && length ? `${width} × ${length} m` : "Se limpiaron las medidas del piso.",
     });
     invalidate();
-  });
+  };
 
   const coordsFromEvent = (e) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -114,12 +140,27 @@ export default function FloorPlanSection({ floor, points }) {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5">
             <Ruler className="w-3.5 h-3.5 text-muted-foreground" />
-            <Input value={w} onChange={(e) => setW(e.target.value)} placeholder="Ancho" inputMode="decimal" className="w-16 h-8" />
+            <Input value={w} onChange={(e) => setW(e.target.value)} onKeyDown={(e) => e.key === "Enter" && dimsDirty && saveDimensions()} placeholder="Ancho" inputMode="decimal" className="w-16 h-8" />
             <span className="text-xs text-muted-foreground">×</span>
-            <Input value={l} onChange={(e) => setL(e.target.value)} placeholder="Largo" inputMode="decimal" className="w-16 h-8" />
+            <Input value={l} onChange={(e) => setL(e.target.value)} onKeyDown={(e) => e.key === "Enter" && dimsDirty && saveDimensions()} placeholder="Largo" inputMode="decimal" className="w-16 h-8" />
             <span className="text-xs text-muted-foreground">m</span>
-            <Button size="sm" variant="outline" className="h-8" onClick={saveDimensions}>Guardar</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={saveDimensions}
+              disabled={!dimsDirty || savingDims}
+              title={dimsDirty ? "Guardar las medidas del piso" : "Escribe el ancho y el largo para guardarlos"}
+            >
+              {savingDims && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Guardar medidas
+            </Button>
           </div>
+          {floor.plan_url && (
+            <Button size="sm" variant="outline" className="h-8" onClick={() => setStyleOpen(true)} title="Color y transparencia de los pines">
+              <Palette className="w-4 h-4 mr-1.5" /> Pines
+            </Button>
+          )}
           <label className="inline-flex items-center gap-1.5 text-sm px-3 h-8 rounded-md border border-border cursor-pointer hover:bg-muted">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {floor.plan_url ? "Cambiar plano" : "Subir plano"}
@@ -155,7 +196,7 @@ export default function FloorPlanSection({ floor, points }) {
             <img src={floor.plan_url} alt="Plano del piso" draggable={false} className="block w-full h-auto select-none pointer-events-none" />
             {placed.map((p) => {
               const pos = drag?.id === p.id ? { x: drag.x, y: drag.y } : { x: p.plan_x, y: p.plan_y };
-              const color = STATUS_HEX[p.status] || STATUS_HEX.pendiente;
+              const pin = resolvePinStyle(activeProject, p.status);
               return (
                 <div
                   key={p.id}
@@ -168,7 +209,16 @@ export default function FloorPlanSection({ floor, points }) {
                   title={p.name}
                 >
                   <div className="relative">
-                    <div className="w-5 h-5 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color }} />
+                    {/* Coloured ring + optional fill, with a white halo so the
+                        pin stays readable on any plan, even fully transparent. */}
+                    <div
+                      className="w-5 h-5 rounded-full"
+                      style={{
+                        backgroundColor: pin.fill,
+                        border: `2px solid ${pin.color}`,
+                        boxShadow: "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)",
+                      }}
+                    />
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => unplace(e, p.id)}
@@ -192,22 +242,32 @@ export default function FloorPlanSection({ floor, points }) {
                 Puntos sin ubicar ({unplaced.length}) — toca uno y luego toca el plano:
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {unplaced.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setPlacingId(placingId === p.id ? null : p.id)}
-                    className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-colors ${placingId === p.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
-                  >
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_HEX[p.status] || STATUS_HEX.pendiente }} />
-                    {p.name}
-                  </button>
-                ))}
+                {unplaced.map((p) => {
+                  const pin = resolvePinStyle(activeProject, p.status);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setPlacingId(placingId === p.id ? null : p.id)}
+                      className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-colors ${placingId === p.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pin.fill, border: `1.5px solid ${pin.color}` }} />
+                      {p.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground">Arrastra un pin para moverlo · toca un pin para abrir su checklist.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+            <span>Arrastra un pin para moverlo · toca un pin para abrir su checklist. Los pines se guardan solos.</span>
+            {savedW > 0 && savedL > 0 && (
+              <span>Medidas: {savedW} × {savedL} m · {Math.round(savedW * savedL)} m²</span>
+            )}
+          </div>
         </>
       )}
+
+      <PinStyleDialog open={styleOpen} onClose={() => setStyleOpen(false)} project={activeProject} />
     </div>
   );
 }

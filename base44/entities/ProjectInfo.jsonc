@@ -79,6 +79,15 @@
         "type": "string"
       },
       "description": "Renombres de terminología {clave: etiqueta} (ej: {point: 'Nodo'})"
+    },
+    "pin_color": {
+      "type": "string",
+      "description": "Color fijo (hex) de los pines sobre el plano. Vacío = color según el estado del punto"
+    },
+    "pin_opacity": {
+      "type": "number",
+      "default": 100,
+      "description": "Opacidad del relleno de los pines (0-100). 0 = pin transparente, solo contorno"
     }
   },
   "required": [

@@ -1,0 +1,176 @@
+import React, { useEffect, useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useInvalidateData } from "@/lib/queries";
+import { useAction } from "@/lib/useAction";
+import { useToast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import {
+  PIN_STATUS_COLORS, DEFAULT_PIN_OPACITY, isHexColor, normalizePinOpacity, resolvePinStyle,
+} from "@/lib/branding";
+
+const STATUS_LABELS = {
+  pendiente: "Pendiente",
+  en_proceso: "En proceso",
+  finalizado: "Finalizado",
+  con_observaciones: "Con obs.",
+};
+
+const FALLBACK_COLOR = "#2563eb";
+
+// Appearance of the plan pins, stored on the project so every floor plan in it
+// looks the same. Colour is either the point's status colour (default) or a
+// fixed one, and the fill opacity goes down to 0 for contour-only pins.
+export default function PinStyleDialog({ open, onClose, project }) {
+  const invalidate = useInvalidateData();
+  const run = useAction();
+  const { toast } = useToast();
+  const [mode, setMode] = useState("status"); // "status" | "fixed"
+  const [color, setColor] = useState(FALLBACK_COLOR);
+  const [opacity, setOpacity] = useState(DEFAULT_PIN_OPACITY);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const fixed = isHexColor(project?.pin_color);
+    setMode(fixed ? "fixed" : "status");
+    setColor(fixed ? project.pin_color.trim() : FALLBACK_COLOR);
+    setOpacity(normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY));
+  }, [open, project?.pin_color, project?.pin_opacity]);
+
+  // Preview uses the same resolver as the plan, on a throwaway project shape.
+  const preview = { pin_color: mode === "fixed" ? color : "", pin_opacity: opacity };
+  const previewStatuses = mode === "fixed" ? ["finalizado"] : Object.keys(PIN_STATUS_COLORS);
+
+  const save = async () => {
+    if (!project) return;
+    if (mode === "fixed" && !isHexColor(color)) {
+      toast({ variant: "destructive", title: "Color inválido", description: "Usa un color hexadecimal, por ejemplo #2563eb." });
+      return;
+    }
+    setSaving(true);
+    const ok = await run(async () => {
+      await base44.entities.ProjectInfo.update(project.id, {
+        pin_color: mode === "fixed" ? color.trim() : "",
+        pin_opacity: normalizePinOpacity(opacity),
+      });
+      return true;
+    }, "No se pudo guardar el estilo de los pines");
+    setSaving(false);
+    if (!ok) return;
+    toast({ title: "Estilo de pines guardado" });
+    invalidate();
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Estilo de los pines</DialogTitle></DialogHeader>
+
+        {!project ? (
+          <p className="text-sm text-muted-foreground">Selecciona un proyecto para configurar sus pines.</p>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs mb-1.5 block">Color</Label>
+              <div className="inline-flex rounded-lg border border-border overflow-hidden text-xs">
+                <button
+                  onClick={() => setMode("status")}
+                  className={`px-3 py-1.5 font-medium transition-colors ${mode === "status" ? "bg-primary text-white" : "hover:bg-muted"}`}
+                >
+                  Según el estado
+                </button>
+                <button
+                  onClick={() => setMode("fixed")}
+                  className={`px-3 py-1.5 font-medium transition-colors ${mode === "fixed" ? "bg-primary text-white" : "hover:bg-muted"}`}
+                >
+                  Color fijo
+                </button>
+              </div>
+              {mode === "fixed" && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="color"
+                    value={isHexColor(color) ? color : FALLBACK_COLOR}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="h-9 w-10 rounded-md border border-border cursor-pointer bg-white p-0.5"
+                  />
+                  <Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#2563eb" className="h-9 font-mono text-xs w-32" />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs">Relleno</Label>
+                <span className="text-xs text-muted-foreground">
+                  {opacity === 0 ? "Transparente" : `${opacity}%`}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={opacity}
+                onChange={(e) => setOpacity(Number(e.target.value))}
+                className="w-full accent-primary cursor-pointer"
+              />
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(0)}>Transparente</Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(50)}>Semitransparente</Button>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(100)}>Sólido</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Con el relleno transparente solo se dibuja el contorno, así el plano se ve a través del pin.
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-xs mb-1.5 block">Vista previa</Label>
+              <div
+                className="flex items-center gap-5 rounded-lg border border-border p-4"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%), linear-gradient(45deg, #f1f5f9 25%, #ffffff 25%, #ffffff 75%, #f1f5f9 75%)",
+                  backgroundSize: "14px 14px",
+                  backgroundPosition: "0 0, 7px 7px",
+                }}
+              >
+                {previewStatuses.map((status) => {
+                  const pin = resolvePinStyle(preview, status);
+                  return (
+                    <div key={status} className="flex flex-col items-center gap-1.5">
+                      <div
+                        className="w-5 h-5 rounded-full"
+                        style={{
+                          backgroundColor: pin.fill,
+                          border: `2px solid ${pin.color}`,
+                          boxShadow: "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)",
+                        }}
+                      />
+                      {mode === "status" && <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[status]}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Aplica a los planos de todos los pisos de «{project.project_name}».
+            </p>
+
+            <Button onClick={save} disabled={saving} className="w-full">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Guardar
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
