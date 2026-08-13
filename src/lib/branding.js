@@ -60,6 +60,7 @@ export const PIN_STATUS_COLORS = {
 };
 
 export const DEFAULT_PIN_OPACITY = 100;
+export const DEFAULT_PIN_BORDER_OPACITY = 100;
 
 export function isHexColor(value) {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
@@ -71,15 +72,23 @@ export function normalizePinOpacity(value) {
 }
 
 // How a plan pin should be painted for a given point: the project's fixed color
-// when one is set, otherwise the point's status color. The fill honours the
-// project's opacity, so pins can be translucent or fully transparent (contour
-// only) to avoid hiding the drawing underneath.
+// when one is set, otherwise the point's status color. Fill and contour carry
+// their own opacity, so a pin can be translucent, contour-only, fill-only or
+// anything in between, to avoid hiding the drawing underneath.
 export function resolvePinStyle(project, status) {
   const color = isHexColor(project?.pin_color)
     ? project.pin_color.trim()
     : (PIN_STATUS_COLORS[status] || PIN_STATUS_COLORS.pendiente);
   const opacity = normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY);
-  return { color, opacity, rgb: hexToRgb(color), fill: hexToRgba(color, opacity / 100) };
+  const borderOpacity = normalizePinOpacity(project?.pin_border_opacity ?? DEFAULT_PIN_BORDER_OPACITY);
+  return {
+    color,
+    opacity,
+    borderOpacity,
+    rgb: hexToRgb(color),
+    fill: hexToRgba(color, opacity / 100),
+    border: hexToRgba(color, borderOpacity / 100),
+  };
 }
 
 // --- Terminology -----------------------------------------------------------

@@ -439,12 +439,15 @@ function drawPlanPins(r, points, box, project) {
       fill(doc, pin.rgb);
       doc.circle(cx, cy, PLAN_PIN_R, "F");
     });
-    stroke(doc, C.white);
-    doc.setLineWidth(1.6);
-    doc.circle(cx, cy, PLAN_PIN_R + 0.6, "S");
-    stroke(doc, pin.rgb);
-    doc.setLineWidth(1);
-    doc.circle(cx, cy, PLAN_PIN_R, "S");
+    // The white halo belongs to the ring, so both fade out together.
+    withAlpha(doc, pin.borderOpacity / 100, () => {
+      stroke(doc, C.white);
+      doc.setLineWidth(1.6);
+      doc.circle(cx, cy, PLAN_PIN_R + 0.6, "S");
+      stroke(doc, pin.rgb);
+      doc.setLineWidth(1);
+      doc.circle(cx, cy, PLAN_PIN_R, "S");
+    });
 
     const label = p.name || "";
     if (!label) continue;

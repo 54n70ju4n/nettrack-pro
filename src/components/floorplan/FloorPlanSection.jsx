@@ -209,14 +209,17 @@ export default function FloorPlanSection({ floor, points }) {
                   title={p.name}
                 >
                   <div className="relative">
-                    {/* Coloured ring + optional fill, with a white halo so the
-                        pin stays readable on any plan, even fully transparent. */}
+                    {/* Ring + fill, each with its own opacity. The white halo
+                        follows the ring, so a transparent contour leaves nothing
+                        drawn around the pin. */}
                     <div
                       className="w-5 h-5 rounded-full"
                       style={{
                         backgroundColor: pin.fill,
-                        border: `2px solid ${pin.color}`,
-                        boxShadow: "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)",
+                        border: `2px solid ${pin.border}`,
+                        boxShadow: pin.borderOpacity > 0
+                          ? "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)"
+                          : "none",
                       }}
                     />
                     <button
@@ -250,7 +253,7 @@ export default function FloorPlanSection({ floor, points }) {
                       onClick={() => setPlacingId(placingId === p.id ? null : p.id)}
                       className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border transition-colors ${placingId === p.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
                     >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pin.fill, border: `1.5px solid ${pin.color}` }} />
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pin.fill, border: `1.5px solid ${pin.border}` }} />
                       {p.name}
                     </button>
                   );

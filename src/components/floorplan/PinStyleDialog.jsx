@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import {
-  PIN_STATUS_COLORS, DEFAULT_PIN_OPACITY, isHexColor, normalizePinOpacity, resolvePinStyle,
+  PIN_STATUS_COLORS, DEFAULT_PIN_OPACITY, DEFAULT_PIN_BORDER_OPACITY,
+  isHexColor, normalizePinOpacity, resolvePinStyle,
 } from "@/lib/branding";
 
 const STATUS_LABELS = {
@@ -21,6 +22,33 @@ const STATUS_LABELS = {
 
 const FALLBACK_COLOR = "#2563eb";
 
+// Opacity slider with the usual presets, used for both the fill and the contour.
+function OpacityControl({ label, value, onChange, hint }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <Label className="text-xs">{label}</Label>
+        <span className="text-xs text-muted-foreground">{value === 0 ? "Transparente" : `${value}%`}</span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        step="5"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary cursor-pointer"
+      />
+      <div className="flex gap-2 mt-2">
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onChange(0)}>Transparente</Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onChange(50)}>Medio</Button>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onChange(100)}>Sólido</Button>
+      </div>
+      {hint && <p className="text-xs text-muted-foreground mt-2">{hint}</p>}
+    </div>
+  );
+}
+
 // Appearance of the plan pins, stored on the project so every floor plan in it
 // looks the same. Colour is either the point's status colour (default) or a
 // fixed one, and the fill opacity goes down to 0 for contour-only pins.
@@ -31,6 +59,7 @@ export default function PinStyleDialog({ open, onClose, project }) {
   const [mode, setMode] = useState("status"); // "status" | "fixed"
   const [color, setColor] = useState(FALLBACK_COLOR);
   const [opacity, setOpacity] = useState(DEFAULT_PIN_OPACITY);
+  const [borderOpacity, setBorderOpacity] = useState(DEFAULT_PIN_BORDER_OPACITY);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -39,10 +68,15 @@ export default function PinStyleDialog({ open, onClose, project }) {
     setMode(fixed ? "fixed" : "status");
     setColor(fixed ? project.pin_color.trim() : FALLBACK_COLOR);
     setOpacity(normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY));
-  }, [open, project?.pin_color, project?.pin_opacity]);
+    setBorderOpacity(normalizePinOpacity(project?.pin_border_opacity ?? DEFAULT_PIN_BORDER_OPACITY));
+  }, [open, project?.pin_color, project?.pin_opacity, project?.pin_border_opacity]);
 
   // Preview uses the same resolver as the plan, on a throwaway project shape.
-  const preview = { pin_color: mode === "fixed" ? color : "", pin_opacity: opacity };
+  const preview = {
+    pin_color: mode === "fixed" ? color : "",
+    pin_opacity: opacity,
+    pin_border_opacity: borderOpacity,
+  };
   const previewStatuses = mode === "fixed" ? ["finalizado"] : Object.keys(PIN_STATUS_COLORS);
 
   const save = async () => {
@@ -56,6 +90,7 @@ export default function PinStyleDialog({ open, onClose, project }) {
       await base44.entities.ProjectInfo.update(project.id, {
         pin_color: mode === "fixed" ? color.trim() : "",
         pin_opacity: normalizePinOpacity(opacity),
+        pin_border_opacity: normalizePinOpacity(borderOpacity),
       });
       return true;
     }, "No se pudo guardar el estilo de los pines");
@@ -104,31 +139,23 @@ export default function PinStyleDialog({ open, onClose, project }) {
               )}
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <Label className="text-xs">Relleno</Label>
-                <span className="text-xs text-muted-foreground">
-                  {opacity === 0 ? "Transparente" : `${opacity}%`}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="5"
-                value={opacity}
-                onChange={(e) => setOpacity(Number(e.target.value))}
-                className="w-full accent-primary cursor-pointer"
-              />
-              <div className="flex gap-2 mt-2">
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(0)}>Transparente</Button>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(50)}>Semitransparente</Button>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setOpacity(100)}>Sólido</Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Con el relleno transparente solo se dibuja el contorno, así el plano se ve a través del pin.
-              </p>
-            </div>
+            <OpacityControl
+              label="Relleno"
+              value={opacity}
+              onChange={setOpacity}
+              hint="Con el relleno transparente solo queda el contorno, así el plano se ve a través del pin."
+            />
+
+            <OpacityControl
+              label="Contorno"
+              value={borderOpacity}
+              onChange={setBorderOpacity}
+              hint={
+                borderOpacity === 0 && opacity === 0
+                  ? "Con el relleno y el contorno transparentes los pines quedan invisibles: seguirán ahí y podrás arrastrarlos, pero no se verán."
+                  : "El contorno incluye el halo blanco que separa el pin del dibujo."
+              }
+            />
 
             <div>
               <Label className="text-xs mb-1.5 block">Vista previa</Label>
@@ -149,8 +176,10 @@ export default function PinStyleDialog({ open, onClose, project }) {
                         className="w-5 h-5 rounded-full"
                         style={{
                           backgroundColor: pin.fill,
-                          border: `2px solid ${pin.color}`,
-                          boxShadow: "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)",
+                          border: `2px solid ${pin.border}`,
+                          boxShadow: pin.borderOpacity > 0
+                            ? "0 0 0 1.5px rgba(255,255,255,0.95), 0 1px 2px rgba(0,0,0,0.25)"
+                            : "none",
                         }}
                       />
                       {mode === "status" && <span className="text-[10px] text-muted-foreground">{STATUS_LABELS[status]}</span>}

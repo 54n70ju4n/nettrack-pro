@@ -87,7 +87,12 @@
     "pin_opacity": {
       "type": "number",
       "default": 100,
-      "description": "Opacidad del relleno de los pines (0-100). 0 = pin transparente, solo contorno"
+      "description": "Opacidad del relleno de los pines (0-100). 0 = relleno transparente, solo contorno"
+    },
+    "pin_border_opacity": {
+      "type": "number",
+      "default": 100,
+      "description": "Opacidad del contorno de los pines (0-100). 0 = contorno transparente"
     }
   },
   "required": [
