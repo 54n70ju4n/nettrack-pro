@@ -9,10 +9,11 @@ import {
 import { sortItems } from "./ordering";
 import {
   C, STATUS_STYLE, STATUS_ORDER, DEVICE_STYLE, PHASE_STYLE,
-  fill, stroke, panel, line,
+  fill, stroke, ink, font, panel, line, withAlpha,
   pill, pillWidth, bar, check, donut, ring, kpiCard, field, fieldBlock, fieldBlockHeight,
   loadPhoto, photoCell,
 } from "./pdfKit";
+import { resolvePinStyle, isHexColor } from "./branding";
 
 // jsPDF (and its transitive deps) is ~580 kB, so load it on demand the first
 // time the user actually exports, instead of on every page that can export.
@@ -420,6 +421,99 @@ function drawFloorBanner(r, floor, spaces, points) {
   r.y += h + GAP;
 }
 
+// --- Floor plan -------------------------------------------------------------
+
+const PLAN_PIN_R = 4.6;
+const isPlaced = (p) => Number.isFinite(p.plan_x) && Number.isFinite(p.plan_y);
+
+// Pins over the plan image, matching the on-screen appearance: coloured ring,
+// fill at the project's opacity (0 = contour only) and the point name beside it.
+function drawPlanPins(r, points, box, project) {
+  const { doc } = r;
+  for (const p of points) {
+    const cx = box.x + (p.plan_x / 100) * box.w;
+    const cy = box.y + (p.plan_y / 100) * box.h;
+    const pin = resolvePinStyle(project, p.status);
+
+    withAlpha(doc, pin.opacity / 100, () => {
+      fill(doc, pin.rgb);
+      doc.circle(cx, cy, PLAN_PIN_R, "F");
+    });
+    stroke(doc, C.white);
+    doc.setLineWidth(1.6);
+    doc.circle(cx, cy, PLAN_PIN_R + 0.6, "S");
+    stroke(doc, pin.rgb);
+    doc.setLineWidth(1);
+    doc.circle(cx, cy, PLAN_PIN_R, "S");
+
+    const label = p.name || "";
+    if (!label) continue;
+    font(doc, "bold", 5.5);
+    const tw = doc.getTextWidth(label);
+    // Flip the label to the left when it would run past the plan's edge.
+    const right = cx + PLAN_PIN_R + 3;
+    const lx = right + tw + 3 > box.x + box.w ? cx - PLAN_PIN_R - 3 - tw - 3 : right;
+    withAlpha(doc, 0.85, () => {
+      fill(doc, C.white);
+      doc.roundedRect(lx - 2, cy - 4.3, tw + 4, 8.6, 2, 2, "F");
+    });
+    ink(doc, C.ink);
+    doc.text(label, lx, cy + 0.4, { baseline: "middle" });
+  }
+}
+
+// The floor plan image with its located points, as shown in the app.
+function drawPlanCard(r, floor, points, planImage, project) {
+  const { doc } = r;
+  const innerW = r.contentW - 28;
+
+  if (!planImage) {
+    const card = openCard(r, 26, "Plano del piso");
+    panel(doc, card.x, card.y, card.w, 26, { bg: C.soft, border: C.border, r: 5 });
+    line(doc, "No se pudo cargar la imagen del plano.", card.x + 8, card.y + 13, { size: 8, color: C.faint, baseline: "middle" });
+    closeCard(r, card);
+    return;
+  }
+
+  // Fit the plan inside a full page at most, so the card never overflows.
+  const legendH = 14;
+  const maxH = r.bottom - (MARGIN + 10) - CARD_PAD - legendH;
+  const scale = Math.min(innerW / planImage.w, maxH / planImage.h);
+  const w = planImage.w * scale;
+  const h = planImage.h * scale;
+
+  const card = openCard(r, h + legendH, "Plano del piso");
+  const x = card.x + (card.w - w) / 2;
+  doc.addImage(planImage.dataUrl, planImage.format || "PNG", x, card.y, w, h);
+  stroke(doc, C.border);
+  doc.setLineWidth(0.6);
+  doc.rect(x, card.y, w, h, "S");
+  drawPlanPins(r, points.filter(isPlaced), { x, y: card.y, w, h }, project);
+
+  // Footer strip: dimensions on the left, status legend on the right.
+  const legendY = card.y + h + 4;
+  if (floor?.width && floor?.length) {
+    line(doc, `${floor.width} × ${floor.length} m · ${Math.round(floor.width * floor.length)} m²`, card.x, legendY, {
+      size: 7, color: C.muted,
+    });
+  }
+  if (!isHexColor(project?.pin_color)) {
+    let lx = card.x + card.w;
+    for (const key of [...STATUS_ORDER].reverse()) {
+      const s = STATUS_STYLE[key];
+      font(doc, "normal", 6.5);
+      const tw = doc.getTextWidth(s.label);
+      lx -= tw;
+      line(doc, s.label, lx, legendY, { size: 6.5, color: C.muted });
+      lx -= 6;
+      fill(doc, s.dot);
+      doc.circle(lx, legendY + 3, 2.2, "F");
+      lx -= 10;
+    }
+  }
+  closeCard(r, card);
+}
+
 // --- Point sheet (mirrors the checklist view of a single point) -------------
 
 function drawSheetHeader(r, pt, { floorName, spaceName, tpl }) {
@@ -614,6 +708,10 @@ async function renderFloorScope(r, floor, spaces, points, { showBanner = false, 
   drawPhaseCard(r, aggregatePhaseProgress(points));
   drawProgressRows(r, "Avance por espacio", groupRows(sortedSpaces, points, "space_id"));
   if (withDevices) drawProgressRows(r, "Avance por tipo de dispositivo", deviceRows(points));
+  // Plans are line art, so PNG keeps them crisp where JPEG would ring.
+  if (floor?.plan_url) {
+    drawPlanCard(r, floor, points, await loadPhoto(floor.plan_url, { maxPx: 1800, format: "PNG" }), r.project);
+  }
   drawPointIndex(
     r,
     allPoints.map((p) => ({

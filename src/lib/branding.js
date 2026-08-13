@@ -35,14 +35,17 @@ export function applyBrandColor(hex) {
   else root.style.removeProperty("--primary");
 }
 
-// Converts a hex color to `rgba(...)` with the given alpha (0-1).
-export function hexToRgba(hex, alpha = 1) {
+// Converts a hex color to an [r, g, b] triplet. Falls back to slate.
+export function hexToRgb(hex) {
   let h = String(hex || "").replace("#", "").trim();
   if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return `rgba(100, 116, 139, ${alpha})`;
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
+  if (h.length !== 6 || /[^0-9a-f]/i.test(h)) return [100, 116, 139];
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+// Converts a hex color to `rgba(...)` with the given alpha (0-1).
+export function hexToRgba(hex, alpha = 1) {
+  const [r, g, b] = hexToRgb(hex);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -76,7 +79,7 @@ export function resolvePinStyle(project, status) {
     ? project.pin_color.trim()
     : (PIN_STATUS_COLORS[status] || PIN_STATUS_COLORS.pendiente);
   const opacity = normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY);
-  return { color, opacity, fill: hexToRgba(color, opacity / 100) };
+  return { color, opacity, rgb: hexToRgb(color), fill: hexToRgba(color, opacity / 100) };
 }
 
 // --- Terminology -----------------------------------------------------------

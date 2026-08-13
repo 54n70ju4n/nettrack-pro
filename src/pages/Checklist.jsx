@@ -17,6 +17,8 @@ import { getPointPhaseProgress, getEquipmentFieldPhase } from "@/lib/pointProgre
 import { usePoint, useFloors, useSpaces, useTechnicians, useInvalidateData } from "@/lib/queries";
 import { useAction } from "@/lib/useAction";
 import { exportPointPdf } from "@/lib/exportFloorPdf";
+import { useProject } from "@/lib/ProjectContext";
+import { useAuth } from "@/lib/AuthContext";
 import { sortItems } from "@/lib/ordering";
 import DataError from "@/components/shared/DataError";
 
@@ -30,6 +32,8 @@ export default function Checklist() {
   const { data: floors = [] } = useFloors();
   const { data: spaces = [] } = useSpaces();
   const { data: technicians = [] } = useTechnicians();
+  const { activeProject } = useProject();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [form, setForm] = useState(null);
@@ -72,7 +76,7 @@ export default function Checklist() {
 
   const exportPdf = async () => {
     setExporting(true);
-    await run(() => exportPointPdf(form, floor, space), "No se pudo exportar el PDF");
+    await run(() => exportPointPdf(form, floor, space, { project: activeProject, user }), "No se pudo exportar el PDF");
     setExporting(false);
   };
 

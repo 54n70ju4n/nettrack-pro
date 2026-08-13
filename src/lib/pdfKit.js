@@ -280,7 +280,23 @@ export function fieldBlockHeight(doc, w, value, { minH = 28, label = true, place
   return (label ? 9 : 0) + h;
 }
 
-// --- Evidence photos -------------------------------------------------------
+// Runs `draw` with a constant alpha when the jsPDF build supports graphics
+// states, and opaquely otherwise. Alpha 0 draws nothing.
+export function withAlpha(doc, alpha, draw) {
+  const a = Math.max(0, Math.min(1, alpha));
+  if (a <= 0) return;
+  const GState = doc.GState;
+  if (a >= 1 || typeof GState !== "function") {
+    draw();
+    return;
+  }
+  doc.saveGraphicsState();
+  doc.setGState(new GState({ opacity: a }));
+  draw();
+  doc.restoreGraphicsState();
+}
+
+// --- Embedded images -------------------------------------------------------
 
 const imageCache = new Map();
 
@@ -294,11 +310,11 @@ function loadHtmlImage(src, crossOrigin) {
   });
 }
 
-// Fetches a photo and re-encodes it as a bounded JPEG data URL, so a report with
-// many photos stays a reasonable file size. Fetching to a blob first also keeps
-// the canvas untainted; the crossOrigin retry covers servers that only allow the
-// image request itself.
-async function toBoundedJpeg(url, maxPx) {
+// Fetches an image and re-encodes it bounded to `maxPx`, so a report with many
+// photos stays a reasonable file size. Fetching to a blob first also keeps the
+// canvas untainted; the crossOrigin retry covers servers that only allow the
+// image request itself. Line art (floor plans) is kept as PNG; photos as JPEG.
+async function toBoundedImage(url, maxPx, format) {
   let objectUrl = null;
   let img;
   try {
@@ -321,24 +337,27 @@ async function toBoundedJpeg(url, maxPx) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);
-    return { dataUrl: canvas.toDataURL("image/jpeg", 0.72), w, h };
+    const dataUrl = format === "PNG" ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.72);
+    return { dataUrl, w, h, format };
   } finally {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
   }
 }
 
-// Returns { dataUrl, w, h } or null when the photo can't be embedded (offline,
-// CORS, deleted file). Results — including failures — are cached per export.
-export async function loadPhoto(url, maxPx = 900) {
+// Returns { dataUrl, w, h, format } or null when the image can't be embedded
+// (offline, CORS, deleted file). Results — including failures — are cached for
+// the lifetime of the page.
+export async function loadPhoto(url, { maxPx = 900, format = "JPEG" } = {}) {
   if (!url) return null;
-  if (imageCache.has(url)) return imageCache.get(url);
+  const key = `${format}:${maxPx}:${url}`;
+  if (imageCache.has(key)) return imageCache.get(key);
   let result = null;
   try {
-    result = await toBoundedJpeg(url, maxPx);
+    result = await toBoundedImage(url, maxPx, format);
   } catch (e) {
-    console.warn("No se pudo incluir una foto de evidencia en el PDF.", url, e);
+    console.warn("No se pudo incluir una imagen en el PDF.", url, e);
   }
-  imageCache.set(url, result);
+  imageCache.set(key, result);
   return result;
 }
 
@@ -349,7 +368,7 @@ export function photoCell(doc, x, y, size, photo, caption) {
     const scale = Math.min((size - 8) / photo.w, (size - 8) / photo.h);
     const w = photo.w * scale;
     const h = photo.h * scale;
-    doc.addImage(photo.dataUrl, "JPEG", x + (size - w) / 2, y + (size - h) / 2, w, h);
+    doc.addImage(photo.dataUrl, photo.format || "JPEG", x + (size - w) / 2, y + (size - h) / 2, w, h);
   } else {
     font(doc, "normal", 6.5);
     ink(doc, C.faint);
