@@ -54,6 +54,31 @@ export const PHASE_STYLE = {
   rack: { label: "Rack", fg: [126, 34, 206], bg: C.purpleSoft, dot: [168, 85, 247] },
 };
 
+// Accent colour used by the progress marks (bars, rings, checkboxes). Reports
+// set it once from the project's brand colour before drawing; a build runs to
+// completion before the next one starts, so a single module-level value is
+// enough and saves threading the theme through every primitive.
+let accent = C.primary;
+
+export function setAccent(rgb) {
+  accent = Array.isArray(rgb) && rgb.length === 3 ? rgb : C.primary;
+}
+
+export function getAccent() {
+  return accent;
+}
+
+// Blends two rgb triplets. t = 0 keeps `a`, t = 1 gives `b`.
+export function mixRgb(a, b, t) {
+  const k = Math.max(0, Math.min(1, t));
+  return [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * k));
+}
+
+// Perceived lightness, to decide between light and dark text over a colour.
+export function isLightColor(rgb) {
+  return (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114) / 255 > 0.62;
+}
+
 export function fill(doc, color) {
   doc.setFillColor(color[0], color[1], color[2]);
 }
@@ -147,12 +172,12 @@ export function pillWidth(doc, text, { size = 7.5, padX = 6, dot } = {}) {
 }
 
 // Progress bar (rounded track + filled portion), mirroring ProgressBar.
-export function bar(doc, x, y, w, pct, { h = 5, color = C.primary, track = C.slateSoft } = {}) {
+export function bar(doc, x, y, w, pct, { h = 5, color, track = C.slateSoft } = {}) {
   const value = Math.max(0, Math.min(100, pct || 0));
   fill(doc, track);
   doc.roundedRect(x, y, w, h, h / 2, h / 2, "F");
   if (value > 0) {
-    fill(doc, color);
+    fill(doc, color || accent);
     doc.roundedRect(x, y, Math.max(h, (w * value) / 100), h, h / 2, h / 2, "F");
   }
 }
@@ -161,8 +186,8 @@ export function bar(doc, x, y, w, pct, { h = 5, color = C.primary, track = C.sla
 // Returns the x where the label ends, so callers can append a badge.
 export function check(doc, x, y, label, checked, { size = 9.5, gap = 6, fontSize = 8.5, maxW } = {}) {
   if (checked) {
-    fill(doc, C.primary);
-    stroke(doc, C.primary);
+    fill(doc, accent);
+    stroke(doc, accent);
     doc.setLineWidth(0.6);
     doc.roundedRect(x, y, size, size, 2, 2, "FD");
     stroke(doc, C.white);
@@ -219,12 +244,12 @@ export function donut(doc, cx, cy, rOuter, rInner, segments) {
 }
 
 // Progress ring with the percentage in the middle, mirroring ProgressRing.
-export function ring(doc, cx, cy, radius, thickness, pct, { color = C.primary, track = C.hairline, labelSize } = {}) {
+export function ring(doc, cx, cy, radius, thickness, pct, { color, track = C.hairline, labelSize } = {}) {
   const value = Math.max(0, Math.min(100, pct || 0));
   fill(doc, track);
   doc.circle(cx, cy, radius, "F");
   if (value > 0) {
-    sector(doc, cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + (value / 100) * Math.PI * 2, color);
+    sector(doc, cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + (value / 100) * Math.PI * 2, color || accent);
   }
   fill(doc, C.white);
   doc.circle(cx, cy, radius - thickness, "F");

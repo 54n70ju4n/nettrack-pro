@@ -9,11 +9,11 @@ import {
 import { sortItems } from "./ordering";
 import {
   C, STATUS_STYLE, STATUS_ORDER, DEVICE_STYLE, PHASE_STYLE,
-  fill, stroke, ink, font, panel, line, withAlpha,
+  fill, stroke, ink, font, panel, line, clip, withAlpha,
   pill, pillWidth, bar, check, donut, ring, kpiCard, field, fieldBlock, fieldBlockHeight,
-  loadPhoto, photoCell,
+  loadPhoto, photoCell, setAccent, mixRgb, isLightColor,
 } from "./pdfKit";
-import { resolvePinStyle, isHexColor, showPinLabelsInPdf } from "./branding";
+import { resolvePinStyle, isHexColor, showPinLabelsInPdf, hexToRgb } from "./branding";
 
 // jsPDF (and its transitive deps) is ~580 kB, so load it on demand the first
 // time the user actually exports, instead of on every page that can export.
@@ -49,8 +49,33 @@ const PONCHADO_LABELS = { na: "N/A", jack: "Jack (ETH)", z_plug: "Z-Plug" };
 
 const DEVICE_LABELS = { ethernet: "Ethernet", camara: "Cámaras", access_point: "AP WiFi" };
 
+const PROJECT_STATUS_LABELS = { activo: "Activo", en_pausa: "En pausa", finalizado: "Finalizado" };
+
 function formatToday() {
   return new Date().toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString("es");
+}
+
+// Report palette derived from the project's brand colour, so the cover and the
+// progress marks match the app. Falls back to the app's blue.
+function reportTheme(project) {
+  const band = isHexColor(project?.primary_color) ? hexToRgb(project.primary_color) : C.primary;
+  const light = isLightColor(band);
+  return {
+    band,
+    // Decorative circles: darker over a dark brand, lighter over a pale one.
+    bandAccent: light ? mixRgb(band, C.white, 0.4) : mixRgb(band, [0, 0, 0], 0.16),
+    onBand: light ? C.ink : C.white,
+    onBandSoft: light ? mixRgb(C.ink, band, 0.4) : mixRgb(band, C.white, 0.72),
+    accent: light ? mixRgb(band, [0, 0, 0], 0.3) : band, // legible on white
+    tint: mixRgb(band, C.white, 0.88), // section banners
+    tintInk: mixRgb(band, [0, 0, 0], 0.35),
+  };
 }
 
 function generatedBy(user) {
@@ -76,7 +101,9 @@ function createReport(doc, title, meta = {}) {
     project: meta.project || null,
     user: meta.user || null,
     logoDataUrl: meta.logoDataUrl || null,
+    theme: reportTheme(meta.project),
   };
+  setAccent(r.theme.accent);
   r.newPage = () => {
     doc.addPage();
     r.started = true;
@@ -100,7 +127,7 @@ function createReport(doc, title, meta = {}) {
 function drawPageTop(r) {
   const { doc, margin, pageW, contentW } = r;
   const brand = r.project?.project_name || "NETTRACK PRO";
-  line(doc, brand.toUpperCase(), margin, margin - 14, { size: 7, style: "bold", color: C.primary, charSpace: 1.2, maxW: contentW * 0.5 });
+  line(doc, brand.toUpperCase(), margin, margin - 14, { size: 7, style: "bold", color: r.theme.accent, charSpace: 1.2, maxW: contentW * 0.5 });
   if (r.crumb) {
     line(doc, r.crumb, pageW - margin, margin - 14, { size: 7, color: C.faint, align: "right", maxW: contentW * 0.6 });
   }
@@ -125,51 +152,95 @@ function stampFooters(r) {
   doc.setPage(total);
 }
 
-// Cover banner: brand block in the primary color with the report identity, plus
-// the project logo and metadata (client, address, who generated it).
-function drawCover(r, { kicker, title, subtitle }) {
-  const { doc, margin, pageW } = r;
-  const bandH = 124;
-  fill(doc, C.primary);
+// Cover banner in the project's brand colour: the project name is the headline,
+// with the report scope underneath and the logo on the right.
+function drawCover(r, { kicker, title, scope }) {
+  const { doc, margin, pageW, theme } = r;
+  const bandH = 132;
+  fill(doc, theme.band);
   doc.rect(0, 0, pageW, bandH, "F");
   // Subtle depth, without relying on transparency support.
-  fill(doc, C.primaryDark);
+  fill(doc, theme.bandAccent);
   doc.circle(pageW - 66, 40, 50, "F");
-  doc.circle(pageW - 28, 104, 20, "F");
+  doc.circle(pageW - 28, 112, 20, "F");
 
-  // Optional project logo, top-right (on a white chip for contrast).
-  let kickerShift = 0;
+  // Project logo, top-right on a white chip so any logo keeps its contrast.
+  let reserved = 60;
   if (r.logoDataUrl) {
-    const s = 46;
+    const s = 54;
     const lx = pageW - margin - s;
-    const ly = 16;
+    const ly = 20;
     fill(doc, C.white);
-    doc.roundedRect(lx - 4, ly - 4, s + 8, s + 8, 6, 6, "F");
+    doc.roundedRect(lx - 5, ly - 5, s + 10, s + 10, 7, 7, "F");
     try { doc.addImage(r.logoDataUrl, lx, ly, s, s, undefined, "FAST"); } catch { /* unsupported format — skip */ }
-    kickerShift = s + 16;
+    reserved = s + 30;
   }
 
-  line(doc, "NETTRACK PRO", margin, 30, { size: 7.5, style: "bold", color: C.white, charSpace: 1.6 });
-  line(doc, kicker, pageW - margin - kickerShift, 30, { size: 7.5, color: C.primarySoft, align: "right" });
-  line(doc, title, margin, 48, { size: 23, style: "bold", color: C.white, maxW: pageW - margin * 2 - 90 });
-  line(doc, subtitle, margin, 86, { size: 9.5, color: C.primarySoft, maxW: pageW - margin * 2 - 60 });
+  const textW = pageW - margin * 2 - reserved;
+  line(doc, kicker.toUpperCase(), margin, 30, { size: 7.5, style: "bold", color: theme.onBandSoft, charSpace: 1.6, maxW: textW });
+  line(doc, title, margin, 45, { size: 26, style: "bold", color: theme.onBand, maxW: textW });
+  line(doc, scope, margin, 87, { size: 11, style: "bold", color: theme.onBand, maxW: textW });
+  const who = generatedBy(r.user);
+  line(doc, `Generado el ${formatToday()}${who ? ` · por ${who}` : ""}`, margin, 105, {
+    size: 8.5, color: theme.onBandSoft, maxW: textW,
+  });
 
   r.started = true;
-  r.y = bandH + 22;
+  r.y = bandH + 18;
+  drawProjectMeta(r);
+}
 
-  // Project metadata + author strip under the band.
+// The project's details laid out as a labelled grid, the way the app shows them
+// in the project header — a single run-on line used to get truncated.
+function drawProjectMeta(r) {
   const p = r.project;
-  const meta = [];
-  if (p?.client) meta.push(p.client);
-  if (p?.address) meta.push(p.address + (p.city ? `, ${p.city}` : ""));
-  if (p?.url) meta.push(p.url);
-  if (p?.contact_name) meta.push(`Contacto: ${p.contact_name}`);
-  const who = generatedBy(r.user);
-  if (who) meta.push(`Generado por ${who}`);
-  if (meta.length) {
-    line(doc, meta.join("   ·   "), margin, r.y, { size: 8, color: C.muted, maxW: r.contentW });
-    r.y += 18;
-  }
+  if (!p) return;
+  const { doc, margin, contentW } = r;
+
+  const items = [];
+  if (p.client) items.push(["Cliente", p.client]);
+  const address = [p.address, p.city].filter(Boolean).join(", ");
+  if (address) items.push(["Dirección", address]);
+  if (p.contact_name) items.push(["Contacto", p.contact_name]);
+  if (p.phone) items.push(["Teléfono", p.phone]);
+  if (p.email) items.push(["Correo", p.email]);
+  if (p.url) items.push(["Sitio", p.url]);
+  // En dash, not an arrow: the PDF core fonts only cover WinAnsi.
+  const period = [formatDate(p.start_date), formatDate(p.end_date)].filter(Boolean).join(" – ");
+  if (period) items.push(["Periodo", period]);
+  if (p.status) items.push(["Estado", PROJECT_STATUS_LABELS[p.status] || p.status]);
+  if (items.length === 0) return;
+
+  const cols = 3;
+  const gap = 14;
+  const colW = (contentW - 24 - gap * (cols - 1)) / cols;
+  // Values wrap to two lines at most, so one long address can't unbalance the grid.
+  const wrap = (value) => {
+    font(doc, "normal", 8.5);
+    const lines = doc.splitTextToSize(String(value), colW);
+    return lines.length > 2 ? [lines[0], clip(doc, lines.slice(1).join(" "), colW)] : lines;
+  };
+  const cells = items.map(([label, value]) => ({ label, lines: wrap(value) }));
+
+  const rows = [];
+  for (let i = 0; i < cells.length; i += cols) rows.push(cells.slice(i, i + cols));
+  const rowHeights = rows.map((row) => 10 + Math.max(...row.map((c) => c.lines.length)) * 11 + 8);
+  const h = 12 + rowHeights.reduce((a, b) => a + b, 0);
+
+  r.ensure(h);
+  panel(doc, margin, r.y, contentW, h, { bg: C.soft, border: C.border });
+  let y = r.y + 12;
+  rows.forEach((row, i) => {
+    row.forEach((cell, j) => {
+      const x = margin + 12 + j * (colW + gap);
+      line(doc, cell.label.toUpperCase(), x, y, { size: 6.5, style: "bold", color: C.faint, charSpace: 0.5 });
+      cell.lines.forEach((ln, k) => {
+        line(doc, ln, x, y + 11 + k * 11, { size: 8.5, color: C.ink });
+      });
+    });
+    y += rowHeights[i];
+  });
+  r.y += h + GAP;
 }
 
 // Card frame with a bold title (+ optional phase badge). Returns the body box.
@@ -407,17 +478,17 @@ function drawPointIndex(r, rows) {
 
 // Banner that introduces a floor inside the project report.
 function drawFloorBanner(r, floor, spaces, points) {
-  const { doc, margin, contentW } = r;
+  const { doc, margin, contentW, theme } = r;
   const h = 54;
   r.ensure(h + 6);
-  panel(doc, margin, r.y, contentW, h, { bg: C.primarySoft, border: C.primarySoft });
-  line(doc, floor?.name || "Piso", margin + 16, r.y + 13, { size: 14, style: "bold", color: C.primaryDark, maxW: contentW - 160 });
+  panel(doc, margin, r.y, contentW, h, { bg: theme.tint, border: theme.tint });
+  line(doc, floor?.name || "Piso", margin + 16, r.y + 13, { size: 14, style: "bold", color: theme.tintInk, maxW: contentW - 160 });
   line(doc, `${spaces.length} espacios · ${points.length} puntos`, margin + 16, r.y + 34, {
-    size: 8, color: C.primaryDark, maxW: contentW - 160,
+    size: 8, color: theme.tintInk, maxW: contentW - 160,
   });
   const pct = points.length ? Math.round(points.reduce((sum, p) => sum + getPointProgress(p), 0) / points.length) : 0;
-  line(doc, `${pct}%`, margin + contentW - 16, r.y + 14, { size: 13, style: "bold", color: C.primaryDark, align: "right" });
-  bar(doc, margin + contentW - 116, r.y + 36, 100, pct, { h: 5, color: C.primary, track: C.white });
+  line(doc, `${pct}%`, margin + contentW - 16, r.y + 14, { size: 13, style: "bold", color: theme.tintInk, align: "right" });
+  bar(doc, margin + contentW - 116, r.y + 36, 100, pct, { h: 5, track: C.white });
   r.y += h + GAP;
 }
 
@@ -752,10 +823,12 @@ export async function buildFloorDoc(floor, spaces, points, opts = {}) {
   const floorName = floor?.name || "Piso";
   const r = createReport(doc, `NetTrack Pro · Reporte de piso · ${floorName}`, await reportMeta(opts));
 
+  const projectName = opts.project?.project_name;
+  const counts = `${spaces.length} espacios · ${points.length} puntos`;
   drawCover(r, {
-    kicker: opts.project?.project_name || "Reporte de piso",
-    title: floorName,
-    subtitle: `${spaces.length} espacios · ${points.length} puntos · Generado el ${formatToday()}`,
+    kicker: "Reporte de piso",
+    title: projectName || floorName,
+    scope: projectName ? `${floorName} · ${counts}` : counts,
   });
   const stats = computeStats(points);
   drawHero(r, stats);
@@ -774,7 +847,7 @@ export async function buildProjectDoc(floors, spaces, points, opts = {}) {
   drawCover(r, {
     kicker: "Reporte de proyecto",
     title: opts.project?.project_name || "Instalación de red",
-    subtitle: `${floors.length} pisos · ${spaces.length} espacios · ${points.length} puntos · Generado el ${formatToday()}`,
+    scope: `${floors.length} pisos · ${spaces.length} espacios · ${points.length} puntos`,
   });
   const stats = computeStats(points);
   drawHero(r, stats);
