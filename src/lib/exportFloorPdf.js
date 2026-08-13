@@ -639,6 +639,24 @@ function drawGeneralCard(r, pt, { floorName, spaceName, tpl }) {
   closeCard(r, card);
 }
 
+// Project-defined custom fields, laid out like the General card's grid.
+function drawCustomFieldsCard(r, pt) {
+  const defs = r.project?.point_fields || [];
+  if (defs.length === 0) return;
+  const { doc } = r;
+  const rows = Math.ceil(defs.length / 2);
+  const card = openCard(r, rows * FIELD_ROW, "Campos personalizados");
+  const half = (card.w - GAP) / 2;
+  defs.forEach((f, i) => {
+    const x = card.x + (i % 2) * (half + GAP);
+    const y = card.y + Math.floor(i / 2) * FIELD_ROW;
+    const raw = pt.custom_fields?.[f.id];
+    const val = f.type === "checkbox" ? (raw === "true" ? "Sí" : "No") : raw;
+    field(doc, x, y, half, f.label, val, { placeholder: "—" });
+  });
+  closeCard(r, card);
+}
+
 const ROW_H = 14;
 
 // One checklist item per row, single column (matches the Actividades layout).
@@ -742,6 +760,7 @@ async function drawPointSheet(r, pt, { floorName, spaceName }) {
   r.startPage();
   drawSheetHeader(r, pt, { floorName, spaceName, tpl });
   drawGeneralCard(r, pt, { floorName, spaceName, tpl });
+  drawCustomFieldsCard(r, pt);
   drawPhaseCard(r, getPointPhaseProgress(pt));
   drawActivitiesCard(r, pt, tpl);
 

@@ -98,6 +98,26 @@
       "type": "boolean",
       "default": false,
       "description": "Imprimir el nombre de cada punto junto a su pin en el PDF. Desactivado cuando el plano ya trae los rótulos"
+    },
+    "point_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["text", "number", "select", "checkbox"]
+          },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["id", "label", "type"]
+      },
+      "description": "Definición de campos personalizados para los puntos de este proyecto"
     }
   },
   "required": [

@@ -18,6 +18,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { FolderKanban, Plus, Loader2, Save, Pencil, Trash2, Check, Building2, ImageIcon, X, MapPin, Link2, Phone, Mail, User, Palette } from "lucide-react";
 import { TOGGLEABLE_MODULES, TERM_FIELDS } from "@/lib/branding";
+import PointFieldsEditor from "@/components/custom-fields/PointFieldsEditor";
 
 const STATUS = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700" },
@@ -29,7 +30,7 @@ const EMPTY = {
   project_name: "", client: "", status: "activo", address: "", city: "",
   url: "", phone: "", email: "", contact_name: "", logo_url: "",
   start_date: "", end_date: "", description: "",
-  primary_color: "", hidden_modules: [], terminology: {},
+  primary_color: "", hidden_modules: [], terminology: {}, point_fields: [],
 };
 
 export default function Projects() {
@@ -301,6 +302,12 @@ export default function Projects() {
                     <Input key={t.key} value={form.terminology[t.key] || ""} onChange={(e) => setTerm(t.key, e.target.value)} placeholder={t.label} className="h-8 text-sm" />
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <Label className="text-xs mb-1.5 block">Campos personalizados de puntos</Label>
+                <p className="text-[11px] text-muted-foreground mb-2">Campos extra que aparecerán en el checklist de cada punto de este proyecto.</p>
+                <PointFieldsEditor fields={form.point_fields} onChange={(pf) => set({ point_fields: pf })} />
               </div>
             </div>
           </div>

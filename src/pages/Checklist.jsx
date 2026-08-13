@@ -196,6 +196,22 @@ export default function Checklist() {
         </div>
       </Section>
 
+      {/* Custom fields defined on the project */}
+      {activeProject?.point_fields?.length > 0 && (
+        <Section title="Campos personalizados">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {activeProject.point_fields.map((f) => (
+              <CustomField
+                key={f.id}
+                field={f}
+                value={form.custom_fields?.[f.id]}
+                onChange={(val) => update("custom_fields", { ...(form.custom_fields || {}), [f.id]: val })}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Phase progress */}
       <Section title="Avance por fase">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -363,5 +379,38 @@ function CheckItem({ label, checked, onChange, phase }) {
         </span>
       )}
     </label>
+  );
+}
+
+// One project-defined custom field, rendered by its type. Values are stored as
+// strings in the point's custom_fields map.
+function CustomField({ field, value, onChange }) {
+  if (field.type === "checkbox") {
+    return (
+      <label className="flex items-center gap-2.5 cursor-pointer sm:col-span-2">
+        <Checkbox checked={value === "true"} onCheckedChange={(v) => onChange(v ? "true" : "false")} />
+        <span className="text-sm">{field.label}</span>
+      </label>
+    );
+  }
+  return (
+    <div>
+      <Label className="text-xs mb-1.5 block">{field.label}</Label>
+      {field.type === "select" ? (
+        <Select value={value || ""} onValueChange={onChange}>
+          <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+          <SelectContent>
+            {(field.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          type={field.type === "number" ? "number" : "text"}
+          inputMode={field.type === "number" ? "decimal" : undefined}
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
   );
 }

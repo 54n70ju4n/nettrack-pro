@@ -130,6 +130,13 @@
       },
       "description": "Estado de items personalizados {check_id: true/false}"
     },
+    "custom_fields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Valores de campos personalizados del proyecto {field_id: valor}"
+    },
     "puerto_patch_panel": {
       "type": "string"
     },
