@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import {
   PIN_STATUS_COLORS, DEFAULT_PIN_OPACITY, DEFAULT_PIN_BORDER_OPACITY,
-  isHexColor, normalizePinOpacity, resolvePinStyle,
+  isHexColor, normalizePinOpacity, resolvePinStyle, showPinLabelsInPdf,
 } from "@/lib/branding";
 
 const STATUS_LABELS = {
@@ -60,6 +61,7 @@ export default function PinStyleDialog({ open, onClose, project }) {
   const [color, setColor] = useState(FALLBACK_COLOR);
   const [opacity, setOpacity] = useState(DEFAULT_PIN_OPACITY);
   const [borderOpacity, setBorderOpacity] = useState(DEFAULT_PIN_BORDER_OPACITY);
+  const [pdfLabels, setPdfLabels] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,8 @@ export default function PinStyleDialog({ open, onClose, project }) {
     setColor(fixed ? project.pin_color.trim() : FALLBACK_COLOR);
     setOpacity(normalizePinOpacity(project?.pin_opacity ?? DEFAULT_PIN_OPACITY));
     setBorderOpacity(normalizePinOpacity(project?.pin_border_opacity ?? DEFAULT_PIN_BORDER_OPACITY));
-  }, [open, project?.pin_color, project?.pin_opacity, project?.pin_border_opacity]);
+    setPdfLabels(showPinLabelsInPdf(project));
+  }, [open, project?.pin_color, project?.pin_opacity, project?.pin_border_opacity, project?.pin_labels_pdf]);
 
   // Preview uses the same resolver as the plan, on a throwaway project shape.
   const preview = {
@@ -91,6 +94,7 @@ export default function PinStyleDialog({ open, onClose, project }) {
         pin_color: mode === "fixed" ? color.trim() : "",
         pin_opacity: normalizePinOpacity(opacity),
         pin_border_opacity: normalizePinOpacity(borderOpacity),
+        pin_labels_pdf: pdfLabels,
       });
       return true;
     }, "No se pudo guardar el estilo de los pines");
@@ -188,6 +192,17 @@ export default function PinStyleDialog({ open, onClose, project }) {
                 })}
               </div>
             </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer rounded-lg border border-border p-3">
+              <Checkbox checked={pdfLabels} onCheckedChange={(v) => setPdfLabels(!!v)} className="mt-0.5" />
+              <span className="text-xs">
+                <span className="font-medium">Imprimir los nombres en el PDF</span>
+                <span className="block text-muted-foreground mt-0.5">
+                  Actívalo solo si tu plano no trae los rótulos dibujados; si ya los trae, se duplicarían.
+                  En la app el nombre siempre aparece al pasar sobre el pin.
+                </span>
+              </span>
+            </label>
 
             <p className="text-xs text-muted-foreground">
               Aplica a los planos de todos los pisos de «{project.project_name}».

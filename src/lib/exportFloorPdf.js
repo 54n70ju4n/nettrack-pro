@@ -13,7 +13,7 @@ import {
   pill, pillWidth, bar, check, donut, ring, kpiCard, field, fieldBlock, fieldBlockHeight,
   loadPhoto, photoCell,
 } from "./pdfKit";
-import { resolvePinStyle, isHexColor } from "./branding";
+import { resolvePinStyle, isHexColor, showPinLabelsInPdf } from "./branding";
 
 // jsPDF (and its transitive deps) is ~580 kB, so load it on demand the first
 // time the user actually exports, instead of on every page that can export.
@@ -426,10 +426,12 @@ function drawFloorBanner(r, floor, spaces, points) {
 const PLAN_PIN_R = 4.6;
 const isPlaced = (p) => Number.isFinite(p.plan_x) && Number.isFinite(p.plan_y);
 
-// Pins over the plan image, matching the on-screen appearance: coloured ring,
-// fill at the project's opacity (0 = contour only) and the point name beside it.
+// Pins over the plan image, matching the on-screen appearance: coloured ring
+// and fill, each at the project's opacity. Names are only printed when the
+// project asks for them — plans usually carry their own labels already.
 function drawPlanPins(r, points, box, project) {
   const { doc } = r;
+  const withLabels = showPinLabelsInPdf(project);
   for (const p of points) {
     const cx = box.x + (p.plan_x / 100) * box.w;
     const cy = box.y + (p.plan_y / 100) * box.h;
@@ -450,7 +452,7 @@ function drawPlanPins(r, points, box, project) {
     });
 
     const label = p.name || "";
-    if (!label) continue;
+    if (!withLabels || !label) continue;
     font(doc, "bold", 5.5);
     const tw = doc.getTextWidth(label);
     // Flip the label to the left when it would run past the plan's edge.

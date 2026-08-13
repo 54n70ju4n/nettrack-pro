@@ -93,6 +93,11 @@
       "type": "number",
       "default": 100,
       "description": "Opacidad del contorno de los pines (0-100). 0 = contorno transparente"
+    },
+    "pin_labels_pdf": {
+      "type": "boolean",
+      "default": false,
+      "description": "Imprimir el nombre de cada punto junto a su pin en el PDF. Desactivado cuando el plano ya trae los rótulos"
     }
   },
   "required": [

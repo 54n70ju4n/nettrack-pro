@@ -62,6 +62,13 @@ export const PIN_STATUS_COLORS = {
 export const DEFAULT_PIN_OPACITY = 100;
 export const DEFAULT_PIN_BORDER_OPACITY = 100;
 
+// Whether the exported plan prints the point name next to each pin. Off by
+// default: most CAD plans already carry their own labels, and the overlay would
+// duplicate them. The app always shows the name on hover, regardless.
+export function showPinLabelsInPdf(project) {
+  return project?.pin_labels_pdf === true;
+}
+
 export function isHexColor(value) {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || "").trim());
 }
