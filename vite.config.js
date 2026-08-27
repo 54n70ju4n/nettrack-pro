@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Only enable the PWA service worker in production builds. In dev, a registered
+// worker can cache-serve stale /node_modules/.vite and /src chunks, which causes
+// React hooks dispatcher mismatches ("Cannot read properties of null (reading
+// 'useState')") when Vite re-optimizes deps.
+const enablePWA = process.env.NODE_ENV === 'production'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -16,7 +22,7 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
-    VitePWA({
+    enablePWA && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
