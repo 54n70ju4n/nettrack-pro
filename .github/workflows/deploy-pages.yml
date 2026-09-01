@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+# Builds the Vite frontend and publishes it to GitHub Pages.
+# Requires (repo Settings):
+#   - Pages source set to "GitHub Actions"
+#   - Variables VITE_BASE44_APP_ID and VITE_BASE44_APP_BASE_URL pointing at the
+#     hosted Base44 backend (Settings → Secrets and variables → Actions → Variables)
+# Note: the published site still needs Base44 to allow the *.github.io origin
+# (CORS + login) for data and authentication to work.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+        env:
+          GHPAGES: "true"
+          VITE_BASE44_APP_ID: ${{ vars.VITE_BASE44_APP_ID }}
+          VITE_BASE44_APP_BASE_URL: ${{ vars.VITE_BASE44_APP_BASE_URL }}
+      # SPA fallback: serve the app for deep links / refreshes on client routes.
+      - run: cp dist/index.html dist/404.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

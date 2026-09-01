@@ -9,8 +9,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 // 'useState')") when Vite re-optimizes deps.
 const enablePWA = process.env.NODE_ENV === 'production'
 
+// When building for GitHub Pages (project site) the app is served from a
+// sub-path, so assets/router need that base. Base44 dev/publish keep root "/".
+const base = process.env.GHPAGES === "true" ? "/nettrack-pro/" : "/";
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [
     base44({
       // Support for legacy code that imports the base44 SDK with @/integrations, @/entities, etc.
