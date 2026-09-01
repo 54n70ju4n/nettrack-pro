@@ -1,7 +1,7 @@
-import base44 from "@base44/vite-plugin"
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { fileURLToPath, URL } from 'node:url'
 
 // Only enable the PWA service worker in production builds. In dev, a registered
 // worker can cache-serve stale /node_modules/.vite and /src chunks, which causes
@@ -16,16 +16,12 @@ const base = process.env.GHPAGES === "true" ? "/nettrack-pro/" : "/";
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  resolve: {
+    // The "@" -> src alias was provided by the Base44 plugin; declare it here
+    // now that the app is backend-free.
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
   plugins: [
-    base44({
-      // Support for legacy code that imports the base44 SDK with @/integrations, @/entities, etc.
-      // can be removed if the code has been updated to use the new SDK imports from @base44/sdk
-      legacySDKImports: process.env.BASE44_LEGACY_SDK_IMPORTS === 'true',
-      hmrNotifier: true,
-      navigationNotifier: true,
-      analyticsTracker: true,
-      visualEditAgent: true
-    }),
     react(),
     enablePWA && VitePWA({
       registerType: 'autoUpdate',
