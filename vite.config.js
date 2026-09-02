@@ -10,8 +10,17 @@ import { fileURLToPath, URL } from 'node:url'
 const enablePWA = process.env.NODE_ENV === 'production'
 
 // When building for GitHub Pages (project site) the app is served from a
-// sub-path, so assets/router need that base. Base44 dev/publish keep root "/".
-const base = process.env.GHPAGES === "true" ? "/nettrack-pro/" : "/";
+// sub-path (/<repo>/), so assets/router need that base. It is derived from the
+// repo automatically in CI (GITHUB_REPOSITORY), so moving the project to another
+// GitHub repo/owner needs no code change. PAGES_BASE overrides it if needed;
+// non-Pages builds (local dev, custom domain) stay at root "/".
+function resolveBase() {
+  if (process.env.GHPAGES !== "true") return "/";
+  if (process.env.PAGES_BASE) return process.env.PAGES_BASE;
+  const repo = process.env.GITHUB_REPOSITORY?.split("/")[1];
+  return repo ? `/${repo}/` : "/nettrack-pro/";
+}
+const base = resolveBase();
 
 // https://vite.dev/config/
 export default defineConfig({

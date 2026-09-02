@@ -51,9 +51,9 @@ Pasos únicos en GitHub:
 1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 2. Haz push a `main` (o Actions → *Deploy to GitHub Pages* → *Run workflow*).
 
-El sitio queda en `https://<usuario>.github.io/<repo>/` (para este repo: `https://54n70ju4n.github.io/nettrack-pro/`).
+El sitio queda en `https://<usuario>.github.io/<repo>/`.
 
-La build para Pages usa `base: "/nettrack-pro/"` automáticamente (variable de entorno `GHPAGES=true` en el workflow); el build normal se sirve desde la raíz. Si publicas bajo otro nombre de repo, ajusta ese sub-path en `vite.config.js` y en el workflow.
+La build para Pages calcula el `base` (`/<repo>/`) **automáticamente** a partir de `GITHUB_REPOSITORY` en el workflow, así que **mover el proyecto a otro repo/owner de GitHub no requiere cambios de código**. Para un dominio propio (sitio en la raíz) o un sub-path distinto, define `PAGES_BASE` (ej. `/` o `/otro/`) en el entorno del build.
 
 ## Estructura
 
