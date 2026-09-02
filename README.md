@@ -2,9 +2,25 @@
 
 Seguimiento de instalaciones de red por **proyectos → pisos → espacios → puntos**, con checklists, planos con pines, reportes en PDF y personalización por proyecto.
 
-Es una aplicación **100% del lado del cliente**: no tiene backend. Todos los datos y las imágenes (logos, planos, evidencia) se guardan en el navegador mediante **IndexedDB**. Esto la hace publicable como sitio estático (GitHub Pages) y utilizable sin conexión.
+La app es un frontend estático con una capa de datos intercambiable:
 
-> ⚠️ Al no haber servidor, los datos **viven solo en el navegador/dispositivo** donde se usan: no se sincronizan entre equipos ni entre usuarios, y se pierden si se borran los datos del sitio. Para respaldar, exporta los reportes en PDF.
+- **Sin configurar nada** → usa **IndexedDB** del navegador (datos locales por dispositivo). Ideal para probar o uso offline.
+- **Con Supabase configurado** → usa una **base de datos compartida en la nube** (Postgres) + Storage para imágenes.
+
+El backend se elige automáticamente según si están las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+
+> ⚠️ En modo **local** los datos viven solo en ese navegador (no se comparten y se pierden si borras los datos del sitio). Respalda con los PDF. En modo **Supabase** los datos son compartidos por todos los que abren el sitio.
+
+## Conectar Supabase (base de datos compartida)
+
+1. Crea un proyecto gratis en [supabase.com](https://supabase.com).
+2. **SQL Editor → New query** → pega y ejecuta el contenido de [`supabase/schema.sql`](supabase/schema.sql). Crea las tablas, el acceso abierto (RLS) y el bucket de imágenes.
+3. En Supabase: **Project Settings → API** → copia **Project URL** y la clave **anon public**.
+4. Ponlas como variables del despliegue:
+   - **GitHub Pages:** repo → **Settings → Secrets and variables → Actions → Variables** → crea `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Luego re-ejecuta el workflow.
+   - **Local:** crea un archivo `.env.local` con esas dos variables.
+
+> ⚠️ **Acceso abierto (sin login):** la clave *anon* va embebida en el sitio y el RLS permite leer/escribir a cualquiera con el enlace. Úsalo solo para una herramienta interna/privada. Para restringirlo hay que añadir Supabase Auth y cambiar las políticas del `schema.sql`.
 
 ## Requisitos
 
