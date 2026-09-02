@@ -40,7 +40,12 @@ jobs:
           VITE_BASE44_APP_BASE_URL: ${{ vars.VITE_BASE44_APP_BASE_URL }}
       # SPA fallback: serve the app for deep links / refreshes on client routes.
       - run: cp dist/index.html dist/404.html
+      # enablement:true turns Pages on automatically (Source = GitHub Actions),
+      # so no manual toggle is needed — as long as Pages is available for the
+      # repo (public repo on the free plan, or any repo on a paid plan).
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
